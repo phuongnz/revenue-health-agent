@@ -1,2 +1,7 @@
 *
 !.gitignore
+# the three example runs' trace, engine log and report, kept as evidence (phase 4)
+!trace-example_[123].jsonl
+!markovian-example_[123].jsonl
+!report-example_[123].json
+!report-example_[123].md

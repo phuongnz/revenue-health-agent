@@ -1,0 +1,960 @@
+{
+  "summary": "Apple: the Revenues series stops at 2018-09-29 and continues under RevenueFromContractWithCustomerExcludingAssessedTax from 2018-09-30, a tag change, not missing revenue; the Revenues series starts at 2015-09-27, where the company began using the tag; earlier revenue sits under a concept this run does not read; 9 periods duplicated across 10-K and 10-Q. The Evaluator reviewed every finding: 13 accepted, 0 rejected, 0 unsupported, 0 sent back to the Analyst. 1 explanation contradicting the findings went back to the Analyst.",
+  "findings": [
+    {
+      "id": "tag_change-1826b79357",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/Revenues -> us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2018-09-29/2018-09-30",
+      "kind": "tag_change",
+      "description": "Revenue moves from Revenues to RevenueFromContractWithCustomerExcludingAssessedTax: the last Revenues period ends 2018-09-29 (10-K 0000320193-18-000145 filed 2018-11-05) and RevenueFromContractWithCustomerExcludingAssessedTax continues from 2018-09-30 (10-K 0000320193-19-000119 filed 2019-10-31). The series is continuous across the tag change, so the stop under Revenues is not missing revenue. RevenueFromContractWithCustomerExcludingAssessedTax also reports 2016-09-25 to 2018-09-29 (10-K 0000320193-19-000119 filed 2019-10-31), the comparatives of later filings, so both concepts cover those periods.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "Revenues",
+          "period_start": "2017-10-01",
+          "period_end": "2018-09-29",
+          "value_usd": 265595000000,
+          "accession_number": "0000320193-18-000145",
+          "fiscal_year": 2018,
+          "fiscal_period": "FY",
+          "period_frame": "CY2018",
+          "form_type": "10-K",
+          "filed_date": "2018-11-05",
+          "row_id": "0000320193-18-000145:2017-10-01:2018-09-29",
+          "table": "edgar.apple_revenue_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "Revenues",
+          "period_start": "2018-07-01",
+          "period_end": "2018-09-29",
+          "value_usd": 62900000000,
+          "accession_number": "0000320193-18-000145",
+          "fiscal_year": 2018,
+          "fiscal_period": "FY",
+          "period_frame": "CY2018Q3",
+          "form_type": "10-K",
+          "filed_date": "2018-11-05",
+          "row_id": "0000320193-18-000145:2018-07-01:2018-09-29",
+          "table": "edgar.apple_revenue_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-09-30",
+          "period_end": "2019-09-28",
+          "value_usd": 260174000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": null,
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2018-09-30:2019-09-28",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-09-30",
+          "period_end": "2019-09-28",
+          "value_usd": 260174000000,
+          "accession_number": "0000320193-20-000096",
+          "fiscal_year": 2020,
+          "fiscal_period": "FY",
+          "period_frame": null,
+          "form_type": "10-K",
+          "filed_date": "2020-10-30",
+          "row_id": "0000320193-20-000096:2018-09-30:2019-09-28",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2016-09-25",
+          "period_end": "2017-09-30",
+          "value_usd": 229234000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": "CY2017",
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2016-09-25:2017-09-30",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.925,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_revenue_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_revenue_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-18-000145:2017-10-01:2018-09-29",
+            "0000320193-18-000145:2018-07-01:2018-09-29"
+          ]
+        },
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-19-000119:2018-09-30:2019-09-28",
+            "0000320193-20-000096:2018-09-30:2019-09-28",
+            "0000320193-19-000119:2016-09-25:2017-09-30"
+          ]
+        }
+      ],
+      "recommendation": "Join the two concepts into one series: Revenues through 2018-09-29, RevenueFromContractWithCustomerExcludingAssessedTax from 2018-09-30.",
+      "evaluator_reason": "The evidence rows show contiguous periods (2018-09-29 end under Revenues, 2018-09-30 start under RevenueFromContractWithCustomerExcludingAssessedTax) with no gap, and the new tag provides comparatives back to 2016, confirming continuity.",
+      "revision_count": 0
+    },
+    {
+      "id": "early_stop-938ff3f21d",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/Revenues",
+      "period": "/2018-09-29",
+      "kind": "early_stop",
+      "description": "The Revenues series stops at the period ending 2018-09-29: its last value, $265,595,000,000 for the annual period 2017-10-01 to 2018-09-29, comes from 10-K 0000320193-18-000145 filed 2018-11-05. No later period is reported under this concept, though the request expects one ending on or after 2025-10-26.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "Revenues",
+          "period_start": "2017-10-01",
+          "period_end": "2018-09-29",
+          "value_usd": 265595000000,
+          "accession_number": "0000320193-18-000145",
+          "fiscal_year": 2018,
+          "fiscal_period": "FY",
+          "period_frame": "CY2018",
+          "form_type": "10-K",
+          "filed_date": "2018-11-05",
+          "row_id": "0000320193-18-000145:2017-10-01:2018-09-29",
+          "table": "edgar.apple_revenue_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "Revenues",
+          "period_start": "2018-07-01",
+          "period_end": "2018-09-29",
+          "value_usd": 62900000000,
+          "accession_number": "0000320193-18-000145",
+          "fiscal_year": 2018,
+          "fiscal_period": "FY",
+          "period_frame": "CY2018Q3",
+          "form_type": "10-K",
+          "filed_date": "2018-11-05",
+          "row_id": "0000320193-18-000145:2018-07-01:2018-09-29",
+          "table": "edgar.apple_revenue_table"
+        }
+      ],
+      "confidence": 0.875,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_revenue_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_revenue_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-18-000145:2017-10-01:2018-09-29",
+            "0000320193-18-000145:2018-07-01:2018-09-29"
+          ]
+        }
+      ],
+      "recommendation": "Check whether the company moved revenue to another XBRL concept after 2018-09-29; until then treat later periods as missing under this tag, not as zero.",
+      "evaluator_reason": "The cited rows confirm the last reported period under this concept ends 2018-09-29 with no later periods shown, matching the early-stop claim relative to the 2025-10-26 expectation.",
+      "revision_count": 0
+    },
+    {
+      "id": "late_start-744923c8da",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2016-09-25/2017-09-30",
+      "kind": "late_start",
+      "description": "The RevenueFromContractWithCustomerExcludingAssessedTax series starts late, at 2016-09-25, because the company began using this concept late: its earliest period (annual, $229,234,000,000) appears only as a comparative in 10-K 0000320193-19-000119 filed 2019-10-31, 761 days after the period ended. Earlier years sit under another revenue concept or predate the company's XBRL filings, so this marks where the tag starts in the data, not revenue missing inside the series; the request covers fiscal years from 2009.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2016-09-25",
+          "period_end": "2017-09-30",
+          "value_usd": 229234000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": "CY2017",
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2016-09-25:2017-09-30",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.85,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-19-000119:2016-09-25:2017-09-30"
+          ]
+        }
+      ],
+      "recommendation": "For history before 2016-09-25, read the company's earlier revenue concept (for example us-gaap/SalesRevenueNet, retired in the 2018 taxonomy); this series cannot supply it.",
+      "evaluator_reason": "The row shows the earliest annual period for the new tag appears only as a comparative in a 2019 filing, 761 days after the period ended, confirming a late start of the concept, not missing revenue.",
+      "revision_count": 0
+    },
+    {
+      "id": "late_start-6552e34821",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/Revenues",
+      "period": "2015-09-27/2016-09-24",
+      "kind": "late_start",
+      "description": "The Revenues series starts late, at 2015-09-27, because the company began using this concept late: its earliest period (annual, $215,639,000,000) appears only as a comparative in 10-K 0000320193-18-000145 filed 2018-11-05, 772 days after the period ended. Earlier years sit under another revenue concept or predate the company's XBRL filings, so this marks where the tag starts in the data, not revenue missing inside the series; the request covers fiscal years from 2009.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "Revenues",
+          "period_start": "2015-09-27",
+          "period_end": "2016-09-24",
+          "value_usd": 215639000000,
+          "accession_number": "0000320193-18-000145",
+          "fiscal_year": 2018,
+          "fiscal_period": "FY",
+          "period_frame": "CY2016",
+          "form_type": "10-K",
+          "filed_date": "2018-11-05",
+          "row_id": "0000320193-18-000145:2015-09-27:2016-09-24",
+          "table": "edgar.apple_revenue_table"
+        }
+      ],
+      "confidence": 0.85,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_revenue_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_revenue_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-18-000145:2015-09-27:2016-09-24"
+          ]
+        }
+      ],
+      "recommendation": "For history before 2015-09-27, read the company's earlier revenue concept (for example us-gaap/SalesRevenueNet, retired in the 2018 taxonomy); this series cannot supply it.",
+      "evaluator_reason": "The single cited row shows the earliest period for this concept is 2015-09-27, filed 772 days after period end, supporting the late-start finding against the 2009 request window.",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-d9f09c3621",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2017-10-01/2017-12-30",
+      "kind": "duplicate",
+      "description": "The quarterly period 2017-10-01 to 2017-12-30 carries the same value, $88,293,000,000, in 2 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-19-000010 filed 2019-01-30 and 10-K 0000320193-19-000119 filed 2019-10-31). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2017-10-01",
+          "period_end": "2017-12-30",
+          "value_usd": 88293000000,
+          "accession_number": "0000320193-19-000010",
+          "fiscal_year": 2019,
+          "fiscal_period": "Q1",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2019-01-30",
+          "row_id": "0000320193-19-000010:2017-10-01:2017-12-30",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2017-10-01",
+          "period_end": "2017-12-30",
+          "value_usd": 88293000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": "CY2017Q4",
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2017-10-01:2017-12-30",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-19-000010:2017-10-01:2017-12-30",
+            "0000320193-19-000119:2017-10-01:2017-12-30"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "Two rows from different filings (10-Q and 10-K) report the identical value for the same quarterly period, so summing would double-count.",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-85d8bae87a",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2017-12-31/2018-03-31",
+      "kind": "duplicate",
+      "description": "The quarterly period 2017-12-31 to 2018-03-31 carries the same value, $61,137,000,000, in 2 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-19-000066 filed 2019-05-01 and 10-K 0000320193-19-000119 filed 2019-10-31). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2017-12-31",
+          "period_end": "2018-03-31",
+          "value_usd": 61137000000,
+          "accession_number": "0000320193-19-000066",
+          "fiscal_year": 2019,
+          "fiscal_period": "Q2",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2019-05-01",
+          "row_id": "0000320193-19-000066:2017-12-31:2018-03-31",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2017-12-31",
+          "period_end": "2018-03-31",
+          "value_usd": 61137000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": "CY2018Q1",
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2017-12-31:2018-03-31",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-19-000066:2017-12-31:2018-03-31",
+            "0000320193-19-000119:2017-12-31:2018-03-31"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "Two rows from different filings (10-Q and 10-K) report the identical value for the same quarterly period, so summing would double-count.",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-9633238010",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2018-04-01/2018-06-30",
+      "kind": "duplicate",
+      "description": "The quarterly period 2018-04-01 to 2018-06-30 carries the same value, $53,265,000,000, in 2 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-19-000076 filed 2019-07-31 and 10-K 0000320193-19-000119 filed 2019-10-31). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-04-01",
+          "period_end": "2018-06-30",
+          "value_usd": 53265000000,
+          "accession_number": "0000320193-19-000076",
+          "fiscal_year": 2019,
+          "fiscal_period": "Q3",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2019-07-31",
+          "row_id": "0000320193-19-000076:2018-04-01:2018-06-30",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-04-01",
+          "period_end": "2018-06-30",
+          "value_usd": 53265000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": "CY2018Q2",
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2018-04-01:2018-06-30",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-19-000076:2018-04-01:2018-06-30",
+            "0000320193-19-000119:2018-04-01:2018-06-30"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "Two rows from different filings (10-Q and 10-K) report the identical value for the same quarterly period, so summing would double-count.",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-fea543cea8",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2018-09-30/2018-12-29",
+      "kind": "duplicate",
+      "description": "The quarterly period 2018-09-30 to 2018-12-29 carries the same value, $84,310,000,000, in 4 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-19-000010 filed 2019-01-30 and 10-K 0000320193-19-000119 filed 2019-10-31). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-09-30",
+          "period_end": "2018-12-29",
+          "value_usd": 84310000000,
+          "accession_number": "0000320193-19-000010",
+          "fiscal_year": 2019,
+          "fiscal_period": "Q1",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2019-01-30",
+          "row_id": "0000320193-19-000010:2018-09-30:2018-12-29",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-09-30",
+          "period_end": "2018-12-29",
+          "value_usd": 84310000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": null,
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2018-09-30:2018-12-29",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-09-30",
+          "period_end": "2018-12-29",
+          "value_usd": 84310000000,
+          "accession_number": "0000320193-20-000010",
+          "fiscal_year": 2020,
+          "fiscal_period": "Q1",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2020-01-29",
+          "row_id": "0000320193-20-000010:2018-09-30:2018-12-29",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-09-30",
+          "period_end": "2018-12-29",
+          "value_usd": 84310000000,
+          "accession_number": "0000320193-20-000096",
+          "fiscal_year": 2020,
+          "fiscal_period": "FY",
+          "period_frame": "CY2018Q4",
+          "form_type": "10-K",
+          "filed_date": "2020-10-30",
+          "row_id": "0000320193-20-000096:2018-09-30:2018-12-29",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-19-000010:2018-09-30:2018-12-29",
+            "0000320193-19-000119:2018-09-30:2018-12-29",
+            "0000320193-20-000010:2018-09-30:2018-12-29",
+            "0000320193-20-000096:2018-09-30:2018-12-29"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "the cited rows support it",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-bd78710e70",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2018-12-30/2019-03-30",
+      "kind": "duplicate",
+      "description": "The quarterly period 2018-12-30 to 2019-03-30 carries the same value, $58,015,000,000, in 4 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-19-000066 filed 2019-05-01 and 10-K 0000320193-19-000119 filed 2019-10-31). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-12-30",
+          "period_end": "2019-03-30",
+          "value_usd": 58015000000,
+          "accession_number": "0000320193-19-000066",
+          "fiscal_year": 2019,
+          "fiscal_period": "Q2",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2019-05-01",
+          "row_id": "0000320193-19-000066:2018-12-30:2019-03-30",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-12-30",
+          "period_end": "2019-03-30",
+          "value_usd": 58015000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": null,
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2018-12-30:2019-03-30",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-12-30",
+          "period_end": "2019-03-30",
+          "value_usd": 58015000000,
+          "accession_number": "0000320193-20-000052",
+          "fiscal_year": 2020,
+          "fiscal_period": "Q2",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2020-05-01",
+          "row_id": "0000320193-20-000052:2018-12-30:2019-03-30",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2018-12-30",
+          "period_end": "2019-03-30",
+          "value_usd": 58015000000,
+          "accession_number": "0000320193-20-000096",
+          "fiscal_year": 2020,
+          "fiscal_period": "FY",
+          "period_frame": "CY2019Q1",
+          "form_type": "10-K",
+          "filed_date": "2020-10-30",
+          "row_id": "0000320193-20-000096:2018-12-30:2019-03-30",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-19-000066:2018-12-30:2019-03-30",
+            "0000320193-19-000119:2018-12-30:2019-03-30",
+            "0000320193-20-000052:2018-12-30:2019-03-30",
+            "0000320193-20-000096:2018-12-30:2019-03-30"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "the cited rows support it",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-57931e2151",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2019-03-31/2019-06-29",
+      "kind": "duplicate",
+      "description": "The quarterly period 2019-03-31 to 2019-06-29 carries the same value, $53,809,000,000, in 4 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-19-000076 filed 2019-07-31 and 10-K 0000320193-19-000119 filed 2019-10-31). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-03-31",
+          "period_end": "2019-06-29",
+          "value_usd": 53809000000,
+          "accession_number": "0000320193-19-000076",
+          "fiscal_year": 2019,
+          "fiscal_period": "Q3",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2019-07-31",
+          "row_id": "0000320193-19-000076:2019-03-31:2019-06-29",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-03-31",
+          "period_end": "2019-06-29",
+          "value_usd": 53809000000,
+          "accession_number": "0000320193-19-000119",
+          "fiscal_year": 2019,
+          "fiscal_period": "FY",
+          "period_frame": null,
+          "form_type": "10-K",
+          "filed_date": "2019-10-31",
+          "row_id": "0000320193-19-000119:2019-03-31:2019-06-29",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-03-31",
+          "period_end": "2019-06-29",
+          "value_usd": 53809000000,
+          "accession_number": "0000320193-20-000062",
+          "fiscal_year": 2020,
+          "fiscal_period": "Q3",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2020-07-31",
+          "row_id": "0000320193-20-000062:2019-03-31:2019-06-29",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-03-31",
+          "period_end": "2019-06-29",
+          "value_usd": 53809000000,
+          "accession_number": "0000320193-20-000096",
+          "fiscal_year": 2020,
+          "fiscal_period": "FY",
+          "period_frame": "CY2019Q2",
+          "form_type": "10-K",
+          "filed_date": "2020-10-30",
+          "row_id": "0000320193-20-000096:2019-03-31:2019-06-29",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-19-000076:2019-03-31:2019-06-29",
+            "0000320193-19-000119:2019-03-31:2019-06-29",
+            "0000320193-20-000062:2019-03-31:2019-06-29",
+            "0000320193-20-000096:2019-03-31:2019-06-29"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "the cited rows support it",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-20d808352f",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2019-09-29/2019-12-28",
+      "kind": "duplicate",
+      "description": "The quarterly period 2019-09-29 to 2019-12-28 carries the same value, $91,819,000,000, in 3 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-20-000010 filed 2020-01-29 and 10-K 0000320193-20-000096 filed 2020-10-30). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-09-29",
+          "period_end": "2019-12-28",
+          "value_usd": 91819000000,
+          "accession_number": "0000320193-20-000010",
+          "fiscal_year": 2020,
+          "fiscal_period": "Q1",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2020-01-29",
+          "row_id": "0000320193-20-000010:2019-09-29:2019-12-28",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-09-29",
+          "period_end": "2019-12-28",
+          "value_usd": 91819000000,
+          "accession_number": "0000320193-20-000096",
+          "fiscal_year": 2020,
+          "fiscal_period": "FY",
+          "period_frame": null,
+          "form_type": "10-K",
+          "filed_date": "2020-10-30",
+          "row_id": "0000320193-20-000096:2019-09-29:2019-12-28",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-09-29",
+          "period_end": "2019-12-28",
+          "value_usd": 91819000000,
+          "accession_number": "0000320193-21-000010",
+          "fiscal_year": 2021,
+          "fiscal_period": "Q1",
+          "period_frame": "CY2019Q4",
+          "form_type": "10-Q",
+          "filed_date": "2021-01-28",
+          "row_id": "0000320193-21-000010:2019-09-29:2019-12-28",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-20-000010:2019-09-29:2019-12-28",
+            "0000320193-20-000096:2019-09-29:2019-12-28",
+            "0000320193-21-000010:2019-09-29:2019-12-28"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "the cited rows support it",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-a426ae558e",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2019-12-29/2020-03-28",
+      "kind": "duplicate",
+      "description": "The quarterly period 2019-12-29 to 2020-03-28 carries the same value, $58,313,000,000, in 3 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-20-000052 filed 2020-05-01 and 10-K 0000320193-20-000096 filed 2020-10-30). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-12-29",
+          "period_end": "2020-03-28",
+          "value_usd": 58313000000,
+          "accession_number": "0000320193-20-000052",
+          "fiscal_year": 2020,
+          "fiscal_period": "Q2",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2020-05-01",
+          "row_id": "0000320193-20-000052:2019-12-29:2020-03-28",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-12-29",
+          "period_end": "2020-03-28",
+          "value_usd": 58313000000,
+          "accession_number": "0000320193-20-000096",
+          "fiscal_year": 2020,
+          "fiscal_period": "FY",
+          "period_frame": null,
+          "form_type": "10-K",
+          "filed_date": "2020-10-30",
+          "row_id": "0000320193-20-000096:2019-12-29:2020-03-28",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2019-12-29",
+          "period_end": "2020-03-28",
+          "value_usd": 58313000000,
+          "accession_number": "0000320193-21-000056",
+          "fiscal_year": 2021,
+          "fiscal_period": "Q2",
+          "period_frame": "CY2020Q1",
+          "form_type": "10-Q",
+          "filed_date": "2021-04-29",
+          "row_id": "0000320193-21-000056:2019-12-29:2020-03-28",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-20-000052:2019-12-29:2020-03-28",
+            "0000320193-20-000096:2019-12-29:2020-03-28",
+            "0000320193-21-000056:2019-12-29:2020-03-28"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "the cited rows support it",
+      "revision_count": 0
+    },
+    {
+      "id": "duplicate-c6d7daf2ff",
+      "company": "Apple",
+      "cik": "320193",
+      "concept": "us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax",
+      "period": "2020-03-29/2020-06-27",
+      "kind": "duplicate",
+      "description": "The quarterly period 2020-03-29 to 2020-06-27 carries the same value, $59,685,000,000, in 3 filings across forms 10-K, 10-Q (first in 10-Q 0000320193-20-000062 filed 2020-07-31 and 10-K 0000320193-20-000096 filed 2020-10-30). Summing or counting rows double-counts it.",
+      "evidence": [
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2020-03-29",
+          "period_end": "2020-06-27",
+          "value_usd": 59685000000,
+          "accession_number": "0000320193-20-000062",
+          "fiscal_year": 2020,
+          "fiscal_period": "Q3",
+          "period_frame": null,
+          "form_type": "10-Q",
+          "filed_date": "2020-07-31",
+          "row_id": "0000320193-20-000062:2020-03-29:2020-06-27",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2020-03-29",
+          "period_end": "2020-06-27",
+          "value_usd": 59685000000,
+          "accession_number": "0000320193-20-000096",
+          "fiscal_year": 2020,
+          "fiscal_period": "FY",
+          "period_frame": null,
+          "form_type": "10-K",
+          "filed_date": "2020-10-30",
+          "row_id": "0000320193-20-000096:2020-03-29:2020-06-27",
+          "table": "edgar.apple_rfcc_table"
+        },
+        {
+          "cik": "320193",
+          "entity_name": "Apple Inc.",
+          "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "period_start": "2020-03-29",
+          "period_end": "2020-06-27",
+          "value_usd": 59685000000,
+          "accession_number": "0000320193-21-000065",
+          "fiscal_year": 2021,
+          "fiscal_period": "Q3",
+          "period_frame": "CY2020Q2",
+          "form_type": "10-Q",
+          "filed_date": "2021-07-28",
+          "row_id": "0000320193-21-000065:2020-03-29:2020-06-27",
+          "table": "edgar.apple_rfcc_table"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "accepted",
+      "sources": [
+        {
+          "kind": "zetaris",
+          "table": "edgar.apple_rfcc_table",
+          "statement": "SELECT cik, entity_name, concept, period_start, period_end, value_usd, accession_number, fiscal_year, fiscal_period, period_frame, form_type, filed_date FROM edgar.apple_rfcc_table ORDER BY period_end, period_start, filed_date, accession_number",
+          "row_ids": [
+            "0000320193-20-000062:2020-03-29:2020-06-27",
+            "0000320193-20-000096:2020-03-29:2020-06-27",
+            "0000320193-21-000065:2020-03-29:2020-06-27"
+          ]
+        }
+      ],
+      "recommendation": "Deduplicate on (period_start, period_end) and keep one row per period, preferring the latest filing.",
+      "evaluator_reason": "the cited rows support it",
+      "revision_count": 0
+    }
+  ],
+  "confidence": 0.927,
+  "limitations": [
+    "Only the XBRL concepts us-gaap/Revenues and us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax are read; revenue a company reported under another tag is not seen.",
+    "Facts are as reported to SEC EDGAR's XBRL API and read through Zetaris; the filings' text is not read.",
+    "The report judges the data's reliability, not the companies."
+  ],
+  "recommended_actions": [
+    "Apple: Join the two concepts into one series: Revenues through 2018-09-29, RevenueFromContractWithCustomerExcludingAssessedTax from 2018-09-30.",
+    "Apple: For history before 2015-09-27, read the company's earlier revenue concept (for example us-gaap/SalesRevenueNet, retired in the 2018 taxonomy); this series cannot supply it.",
+    "Apple RevenueFromContractWithCustomerExcludingAssessedTax: 9 periods are reported with the same value in both 10-K and 10-Q forms; deduplicate on (period_start, period_end) before summing."
+  ]
+}
