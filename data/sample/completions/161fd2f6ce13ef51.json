@@ -1,0 +1,80 @@
+{
+ "key": "161fd2f6ce13ef51",
+ "agent": "Analyst",
+ "purpose": "explain step 2",
+ "prompt_preview": "Continuing a chunked architect run. Goal (truncated): Audit the reliability of the revenue series of Target, Ford (fiscal years from 2009 to latest), one compa…",
+ "captured_in": [
+  "example_3"
+ ],
+ "text": "The RevenueFromContractWithCustomerExcludingAssessedTax series begins late, at 2016-01-31, because the company adopted this concept only in 2016; earlier years sit under another tag or predate XBRL filings, so the request’s 2009 start cannot be covered by this series. Restatements appear across several quarters in 2017 and 2018, each shifting revenue by roughly $220–$450 million after initial 10-Q filings were superseded by 10-K filings, indicating ongoing adjustments to contract revenue recognition. Duplicate rows appear in mid-2017 and early 2018, where the same dollar amount recurs across multiple 10-Q and 10-K filings, meaning counts or sums would double-count those periods. A gap and a tag_change finding complete the set, but the tag_change confirms the series continues under the new concept without a break in coverage. Overall, the series is reliable from its start date forward, but the 2009–2015 window remains unaddressed by this concept, and the restatements and duplicates require careful handling when aggregating or comparing figures. [STATE_CHECKPOINT] COMPLETED: Target us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax: late_start, 7 duplicate, 5 restatement, 1 gap, 1 tag_change; series starts 2016-01-31, restatements $220–450M, duplicates in 2017–2018. REMAINING: Ford us-gaap/Revenues (primary) DECISIONS: Target retry complete; findings accepted; move to Ford primary concept. CONTEXT: as of 2026-10-26; findings so far 17 accepted, 0 sent back.",
+ "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+ "routed_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+ "receipt": {
+  "schema": "meterless.compute_receipt.v1",
+  "receipt_id": "rcpt_req_uw1g9kqw",
+  "decision_id": "req_uw1g9kqw",
+  "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "provider_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "routed_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "winning_route": {
+   "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+   "label": "Nemotron 3.5 Lightning 30B A3B",
+   "provider": "nvidia",
+   "kind": "cloud",
+   "tier": "A"
+  },
+  "requires_review": false,
+  "phases": [
+   {
+    "phase": "final_synthesis",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "ms": 8001,
+    "tokensIn": 2232,
+    "tokensOut": 415,
+    "outputTps": 51.86851643544557,
+    "coherence": null,
+    "tier": "A",
+    "reflex_decided_in_ms": 0.2
+   }
+  ],
+  "usage": {
+   "input_tokens": 2232,
+   "output_tokens": 415,
+   "total_tokens": 2647,
+   "output_tps": 51.86851643544557,
+   "latency_ms": 8001
+  },
+  "cost": {
+   "actual_usd": 0,
+   "naive_usd": 0,
+   "baseline": {
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "label": "Nemotron 3 Ultra 550B A55B",
+    "source": "mode-default-frontier"
+   },
+   "verifier_usd": 0,
+   "race_overhead_usd": 0
+  },
+  "savings": {
+   "amount": 0,
+   "currency": "USD",
+   "vs": "Nemotron 3 Ultra 550B A55B",
+   "baseline_source": "mode-default-frontier"
+  },
+  "cache": {
+   "status": "miss",
+   "losers_reclaimed": 0,
+   "partials_reclaimed": 0
+  },
+  "mode": "auto",
+  "scope": "user",
+  "app": "revenue-health-agent",
+  "from_cache": false
+ },
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 2232,
+  "completion_tokens": 415,
+  "total_tokens": 2647
+ }
+}

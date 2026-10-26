@@ -1,0 +1,80 @@
+{
+ "key": "017f5aeab3ae3aae",
+ "agent": "Analyst",
+ "purpose": "explain step 2",
+ "prompt_preview": "Continuing a chunked architect run. Goal (truncated): Audit the reliability of the revenue series of Apple (fiscal years from 2009 to latest), one company and …",
+ "captured_in": [
+  "example_1"
+ ],
+ "text": "The RevenueFromContractWithCustomerExcludingAssessedTax series begins late, at 2016-09-25, because Apple adopted this concept only with its 2019 10-K filings; earlier years sit under another tag, so the series does not span the full 2009–2026 window you requested. Duplicate values appear across multiple quarters in 2017 and 2018, each spanning two or four filings, which means counting rows would inflate the total; the tag_change finding indicates the series continues under the new concept without a gap. Overall, you can trust the series for periods after 2016, but the early years are excluded and duplicates require careful handling.\n\n[STATE_CHECKPOINT]\nCOMPLETED: Apple us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax (117 rows, 2016-09-25..2026-06-27: late_start, duplicate, tag_change)\nREMAINING: (none)\nDECISIONS: Apple: no further steps; series accepted with late_start and duplicate caveats\nCONTEXT: as of 2026-10-26; findings so far 1 accepted late_start, 9 accepted duplicate, 1 accepted tag_change, 0 sent back\n\n[TASK_COMPLETE]",
+ "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+ "routed_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+ "receipt": {
+  "schema": "meterless.compute_receipt.v1",
+  "receipt_id": "rcpt_req_snqjdhyb",
+  "decision_id": "req_snqjdhyb",
+  "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "provider_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "routed_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "winning_route": {
+   "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+   "label": "Nemotron 3.5 Lightning 30B A3B",
+   "provider": "nvidia",
+   "kind": "cloud",
+   "tier": "A"
+  },
+  "requires_review": false,
+  "phases": [
+   {
+    "phase": "final_synthesis",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "ms": 3152,
+    "tokensIn": 2127,
+    "tokensOut": 299,
+    "outputTps": 94.86040609137055,
+    "coherence": null,
+    "tier": "A",
+    "reflex_decided_in_ms": 0.2
+   }
+  ],
+  "usage": {
+   "input_tokens": 2127,
+   "output_tokens": 299,
+   "total_tokens": 2426,
+   "output_tps": 94.86040609137055,
+   "latency_ms": 3152
+  },
+  "cost": {
+   "actual_usd": 0,
+   "naive_usd": 0,
+   "baseline": {
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "label": "Nemotron 3 Ultra 550B A55B",
+    "source": "mode-default-frontier"
+   },
+   "verifier_usd": 0,
+   "race_overhead_usd": 0
+  },
+  "savings": {
+   "amount": 0,
+   "currency": "USD",
+   "vs": "Nemotron 3 Ultra 550B A55B",
+   "baseline_source": "mode-default-frontier"
+  },
+  "cache": {
+   "status": "miss",
+   "losers_reclaimed": 0,
+   "partials_reclaimed": 0
+  },
+  "mode": "auto",
+  "scope": "user",
+  "app": "revenue-health-agent",
+  "from_cache": false
+ },
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 2127,
+  "completion_tokens": 299,
+  "total_tokens": 2426
+ }
+}

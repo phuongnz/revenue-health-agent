@@ -1,0 +1,116 @@
+{
+ "key": "03454c1a299e2cfb",
+ "statement": "SELECT * FROM edgar.all_companies_profile_table",
+ "captured_in": [
+  "example_1",
+  "example_2",
+  "example_3"
+ ],
+ "headers": [
+  "cik",
+  "entity_name",
+  "sic_code",
+  "sic_description_edgar",
+  "sic_description_reference",
+  "division",
+  "division_desc",
+  "major_group",
+  "major_group_desc",
+  "industry_group",
+  "industry_group_desc"
+ ],
+ "rows": [
+  [
+   "0000320193",
+   "Apple Inc.",
+   "3571",
+   "Electronic Computers",
+   "Electronic Computers",
+   "D",
+   "Manufacturing",
+   35,
+   "Industrial And Commercial Machinery And Computer Equipment",
+   357,
+   "Computer And Office Equipment"
+  ],
+  [
+   "0000051143",
+   "INTERNATIONAL BUSINESS MACHINES CORP",
+   "3570",
+   "Computer & office Equipment",
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  [
+   "0001341439",
+   "ORACLE CORP",
+   "7372",
+   "Services-Prepackaged Software",
+   "Prepackaged Software",
+   "I",
+   "Services",
+   73,
+   "Business Services",
+   737,
+   "Computer Programming, Data Processing, And Other Computer Related Services"
+  ],
+  [
+   "0000104169",
+   "Walmart Inc.",
+   "5331",
+   "Retail-Variety Stores",
+   "Variety Stores",
+   "G",
+   "Retail Trade",
+   53,
+   "General Merchandise Stores",
+   533,
+   "Variety Stores"
+  ],
+  [
+   "0000027419",
+   "TARGET CORP",
+   "5331",
+   "Retail-Variety Stores",
+   "Variety Stores",
+   "G",
+   "Retail Trade",
+   53,
+   "General Merchandise Stores",
+   533,
+   "Variety Stores"
+  ],
+  [
+   "0000037996",
+   "FORD MOTOR CO",
+   "3711",
+   "Motor Vehicles & Passenger Car Bodies",
+   "Motor Vehicles and Passenger Car Bodies",
+   "D",
+   "Manufacturing",
+   37,
+   "Transportation Equipment",
+   371,
+   "Motor Vehicles And Motor Vehicle Equipment"
+  ],
+  [
+   "0001318605",
+   "Tesla, Inc.",
+   "3711",
+   "Motor Vehicles & Passenger Car Bodies",
+   "Motor Vehicles and Passenger Car Bodies",
+   "D",
+   "Manufacturing",
+   37,
+   "Transportation Equipment",
+   371,
+   "Motor Vehicles And Motor Vehicle Equipment"
+  ]
+ ],
+ "total": 7
+}

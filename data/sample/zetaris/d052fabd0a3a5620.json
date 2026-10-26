@@ -1,0 +1,18 @@
+{
+ "key": "d052fabd0a3a5620",
+ "statement": "SHOW DQ ALL INVALID TABLE lightning.metastore.usl_demo.sic_edgar_usl.company",
+ "captured_in": [
+  "example_1",
+  "example_2",
+  "example_3"
+ ],
+ "headers": [
+  "records"
+ ],
+ "rows": [
+  [
+   "{\"cik\":\"0000051143\",\"entity_name\":\"INTERNATIONAL BUSINESS MACHINES CORP\",\"sic\":\"3570\",\"sic_description_edgar\":\"Computer & office Equipment\"}"
+  ]
+ ],
+ "total": 1
+}

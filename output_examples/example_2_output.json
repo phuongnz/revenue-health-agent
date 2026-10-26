@@ -1,0 +1,31 @@
+{
+  "run_id": "example_2",
+  "trace_id": "9348210e275c490c8394f6ad320d7615",
+  "status": "success",
+  "agents_used": [
+    "Planner",
+    "Retriever",
+    "Analyst",
+    "Evaluator",
+    "Reporter"
+  ],
+  "result": {
+    "summary": "Oracle: no problem found in the requested window. The Evaluator reviewed every finding: 0 accepted, 0 rejected, 0 unsupported, 0 sent back to the Analyst.",
+    "findings": [],
+    "confidence": 0.85,
+    "limitations": [
+      "Only the XBRL concepts us-gaap/Revenues and us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax are read; revenue a company reported under another tag is not seen.",
+      "Facts are as reported to SEC EDGAR's XBRL API and read through Zetaris; the filings' text is not read.",
+      "The report judges the data's reliability, not the companies."
+    ],
+    "recommended_actions": []
+  },
+  "collaboration": {
+    "feedback_loop_completed": true,
+    "revision_count": 0,
+    "evaluator_findings": []
+  },
+  "log_path": "logs/trace-example_2.jsonl",
+  "execution_time_seconds": 27.8,
+  "error": null
+}

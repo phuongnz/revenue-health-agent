@@ -1,0 +1,9 @@
+{
+  "run_id": "example_2",
+  "input": {
+    "query": "Is Oracle's reported revenue reliable enough to model fiscal years 2010 to 2015?",
+    "companies": ["ORCL"],
+    "period_start": "2010",
+    "period_end": "2015"
+  }
+}

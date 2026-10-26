@@ -25,6 +25,7 @@ from __future__ import annotations
 import re
 import sys
 import time
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import date
@@ -33,9 +34,10 @@ from typing import Any
 from app.agents.analyst import Analyst, SeriesContext, find_reference_mismatch, short_concept
 from app.agents.evaluator import Evaluator, Evidence
 from app.agents.planner import CONCEPTS, PlanError, Planner, PlanStep
-from app.agents.reporter import ReportInput, Reporter
+from app.agents.reporter import Explanation, ReportInput, Reporter, vetted_critiques
 from app.agents.retriever import DQ_COMPANY_TABLE, RetrievalError, Retriever
 from app.adapters.meterless import MeterlessClient, MeterlessError
+from app.adapters.sample_data import SampleChat, SampleError, SampleStore, SampleZetaris
 from app.adapters.zetaris import ZetarisClient, ZetarisError
 from app.config import Settings
 from app.engines.markovian import REFLECTION_SYSTEM, Markovian, clean_markers
@@ -55,9 +57,15 @@ EXPLAIN_SYSTEM = (
     "has computed and the Evaluator has checked the findings in the step input. Explain in three to five plain "
     "sentences what they mean for trusting this company's revenue series, and connect them to what earlier steps "
     "found (the carry-over state) when they bear on it, for example a series that stopped under one concept and "
-    "continues under another. Quote only figures and dates given to you; never compute new ones. No lists, no "
-    "headings."
+    "continues under another. Quote only figures and dates given to you; never compute new ones. Call each problem "
+    "by its finding's kind: say gap, restated, duplicated, stops early or starts late only when a finding of that "
+    "kind is listed, and call a series with no findings clean. When a tag_change finding says the series is "
+    "continuous, say the revenue continues under the new concept; never call that change a gap or missing revenue. "
+    "No lists, no headings."
 )
+REVISE_EXPLANATION = ("The Evaluator sent this explanation back: {reason}. Rewrite it so that it agrees with the "
+                      "accepted findings above, naming each problem by its finding's kind and quoting only dates and "
+                      "figures given above. Three to five plain sentences, no lists.")
 FRAMING = ("You are explaining a revenue data-quality audit one company and revenue concept at a time; each step "
            "gives you that step's checked findings.")
 
@@ -90,7 +98,7 @@ def _cik(value: Any) -> str:
 class Orchestrator:
     def __init__(
         self, settings: Settings, tracer: Tracer, zetaris: Any, chat: Any = None, *,
-        as_of: date | None = None, clock: Callable[[], float] = time.monotonic,
+        as_of: date | None = None, clock: Callable[[], float] = time.monotonic, source_kind: str = "zetaris",
     ) -> None:
         self.settings = settings
         self.tracer = tracer
@@ -98,6 +106,7 @@ class Orchestrator:
         self.chat = chat
         self.as_of = as_of or date.today()
         self.clock = clock
+        self.source_kind = source_kind  # "sample" when the rows are replayed from data/sample/
 
     def run(self, request: RunRequest) -> RunResponse:
         return _Run(self, request).execute()
@@ -259,6 +268,7 @@ class _Run:
         state.findings.extend(outcome.all)
         state.limitations.extend(outcome.limitations)
         state.notes.extend(outcome.notes)
+        state.critiques.extend(outcome.critiques)
         state.notes.extend(f"{f.status.capitalize()} {f.kind} {f.period or ''} for {f.company}: {f.evaluator_reason}"
                            for f in outcome.rejected + outcome.unsupported)
         state.revision_count += outcome.revision_count
@@ -289,7 +299,9 @@ class _Run:
         if not accepted:
             lines.append("Accepted findings: none; the series is clean in the requested window.")
         else:
-            lines.append("Accepted findings (computed by code, checked by the Evaluator):")
+            by_kind = Counter(f.kind for f in accepted)
+            lines.append("Accepted findings (computed by code, checked by the Evaluator), by kind: "
+                         + ", ".join(f"{n} {k}" for k, n in sorted(by_kind.items())) + ". Quote these counts.")
             for f in accepted[:MAX_FINDINGS_IN_STEP]:
                 lines.append(f"- [{f.kind}] {f.period or ''} confidence {f.confidence:.2f}: {f.description}")
             if len(accepted) > MAX_FINDINGS_IN_STEP:
@@ -314,26 +326,68 @@ class _Run:
             result = self.budget.chat("Analyst", messages, max_tokens=1024, purpose="engine reflection")
             return {"text": result.text, "metadata": result.metadata()}
         record = self.state.records[-1]
+        company, label = record.step.company.name, record.step.label
         text, metadata = "", {"routed_model": None}
         if self.budget is not None and not record.error:
             try:
-                result = self.budget.chat("Analyst", messages, max_tokens=EXPLAIN_MAX_TOKENS,
-                                          purpose=f"explain step {record.number}", target_agent="Reporter")
-                text = clean_markers(result.text)
-                text = re.split(r"\n\s*(COMPLETED|REMAINING|DECISIONS|CONTEXT):", text)[0].strip()
-                metadata = result.metadata()
-                record.explanation_model = result.routed_model
+                text, metadata = self.explain(record, messages, prompt)
             except Exception as e:  # noqa: BLE001 - the fallback is a code-written explanation
+                text = ""
                 self.state.fallbacks += 1
-                self.tracer.emit("Analyst", "explain_fallback", input_summary=record.step.label,
+                self.tracer.emit("Analyst", "explain_fallback", input_summary=label,
                                  output_summary=f"model call failed or skipped: {e}", status="partial_success")
-        if not text:
-            text = self.fallback_explanation(record)
+        code_text = self.fallback_explanation(record)
+        if text:
+            explanation = Explanation(company, label, text, by="model", given=prompt, fallback=code_text)
+        else:
+            text = code_text
+            explanation = Explanation(company, label, text, by="code")
         record.explanation = text
-        self.state.explanations.setdefault(record.step.company.name, []).append(text)
+        self.state.explanations.append(explanation)
         marker = ("[TASK_COMPLETE]" if not self.state.queue
                   else "[STATE_CHECKPOINT]\n" + self.state.carryover_block(self.o.as_of.isoformat()))
         return {"text": f"{text}\n\n{marker}", "metadata": metadata}
+
+    @staticmethod
+    def _clean(text: str) -> str:
+        text = clean_markers(text)
+        return re.split(r"\n\s*(COMPLETED|REMAINING|DECISIONS|CONTEXT):", text)[0].strip()
+
+    def explain(self, record: StepRecord, messages: list[dict[str, str]], prompt: str) -> tuple[str, dict[str, Any]]:
+        """The Analyst model's explanation of one step, held to the findings by the Evaluator:
+        a contradicting explanation goes back once with the reason, and a second one is
+        dropped, so the step is told by the findings alone ("" is returned)."""
+        company, label = record.step.company.name, record.step.label
+        result = self.budget.chat("Analyst", messages, max_tokens=EXPLAIN_MAX_TOKENS,
+                                  purpose=f"explain step {record.number}", target_agent="Evaluator")
+        text, metadata = self._clean(result.text), result.metadata()
+        record.explanation_model = result.routed_model
+        if not text:
+            return "", metadata
+        findings = self.state.accepted_for(company)
+        reason = self.evaluator.review_explanation(text, findings, prompt, company, label)
+        if reason is None:
+            return text, metadata
+        self.state.explanations_sent_back += 1
+        self.tracer.emit("Evaluator", "send_back", input_summary=f"explanation of {label}",
+                         output_summary=f"back to the Analyst (prose check): {reason}", target_agent="Analyst",
+                         retry_count=1, status="needs_revision", details={"explanation_of": label})
+        revise = [*messages, {"role": "assistant", "content": text},
+                  {"role": "user", "content": REVISE_EXPLANATION.format(reason=reason)}]
+        result = self.budget.chat("Analyst", revise, max_tokens=EXPLAIN_MAX_TOKENS,
+                                  purpose=f"revise explanation of step {record.number}", target_agent="Evaluator")
+        text, metadata = self._clean(result.text), result.metadata()
+        again = self.evaluator.review_explanation(text, findings, prompt, company, label, attempt=2) if text else "empty"
+        if again is None:
+            self.state.notes.append(f"The explanation of {label} was sent back once ({reason}); the rewrite agrees "
+                                    f"with the findings.")
+            return text, metadata
+        self.state.notes.append(f"The explanation of {label} contradicted the findings twice ({again}); the step is "
+                                f"told by the findings alone.")
+        self.tracer.emit("Evaluator", "explain_fallback", input_summary=f"explanation of {label} (attempt 2)",
+                         output_summary=f"dropped, the findings stand alone: {again}", target_agent="Reporter",
+                         retry_count=1, status="partial_success", details={"explanation_of": label})
+        return "", metadata
 
     @staticmethod
     def fallback_explanation(record: StepRecord) -> str:
@@ -354,19 +408,26 @@ class _Run:
         state = self.state
         state.use("Reporter")
         plan = state.plan
+        findings = state.findings
+        if self.o.source_kind != "zetaris":
+            findings = [f.model_copy(update={"sources": [s.model_copy(update={"kind": self.o.source_kind})
+                                                         for s in f.sources]}) for f in findings]
+            state.limitations.append(f"Sample mode: the rows and the model's answers are replayed from data/sample/, "
+                                     f"captured from live runs on {self.o.as_of.isoformat()}; they do not move as "
+                                     f"companies file.")
         companies = [c.name for c in plan.companies] if plan else []
         info = ReportInput(
             run_id=self.request.run_id, companies=companies, explanations=state.explanations,
-            limitations=state.limitations, evaluator_notes=state.notes,
+            limitations=state.limitations, evaluator_notes=state.notes, critiques=state.critiques,
             steps_planned=len(state.records) + len(state.queue), steps_with_rows=state.steps_with_rows,
             rejected=sum(1 for f in state.findings if f.status == "rejected"),
             unsupported=sum(1 for f in state.findings if f.status == "unsupported"),
-            revision_count=state.revision_count, agents_used=state.agents_used,
-            trace_path=str(self.tracer.path), reflection=state.reflection,
+            revision_count=state.revision_count, explanations_sent_back=state.explanations_sent_back,
+            agents_used=state.agents_used, trace_path=str(self.tracer.path),
         )
         result = None
         if error is None:
-            result, _, paths = self.reporter.report(state.findings, info, self.o.settings.log_dir)
+            result, _, paths = self.reporter.report(findings, info, self.o.settings.log_dir)
             if state.steps_with_rows == 0:
                 error = RunError(type="source_unavailable", recoverable=True,
                                  message="No revenue table could be read from Zetaris; see limitations.")
@@ -376,8 +437,8 @@ class _Run:
             and all(not r.error for r in state.records) else "partial_success")
         collaboration = Collaboration(
             feedback_loop_completed=bool(reviewed) and all(r.outcome is not None for r in state.records if not r.error),
-            revision_count=state.revision_count,
-            evaluator_findings=state.notes,
+            revision_count=state.revision_count + state.explanations_sent_back,
+            evaluator_findings=[*vetted_critiques(state.findings, state.critiques), *state.notes],
         )
         elapsed = round(self.o.clock() - self.started, 3)
         response = RunResponse(
@@ -413,8 +474,7 @@ def run_request(request: RunRequest, settings: Settings | None = None, stream: A
                            error=RunError(type=kind, message=message, recoverable=recoverable))
 
     if settings.sample_mode or request.options.sample_mode:
-        return fail("not_available", "Sample mode is not built yet; run live with the Zetaris and Nightshift "
-                                     "settings in the environment.", False)
+        return _run_sample(request, settings, tracer, as_of, fail)
     try:
         zetaris = ZetarisClient(settings, tracer)
     except ZetarisError as e:
@@ -431,3 +491,31 @@ def run_request(request: RunRequest, settings: Settings | None = None, stream: A
         zetaris.close()
         if chat is not None:
             chat.close()
+
+
+def _run_sample(request: RunRequest, settings: Settings, tracer: Tracer, as_of: date | None,
+                fail: Callable[[str, str, bool], RunResponse]) -> RunResponse:
+    """Sample mode: the same agents on the stored answers of the captured runs, with the
+    capture date as "today" so the prompts match. Anything the sample does not hold fails
+    the request, naming the keys, rather than passing with fallbacks."""
+    try:
+        store = SampleStore()
+        as_of = as_of or store.as_of
+    except (SampleError, OSError, ValueError, KeyError) as e:
+        return fail("configuration", f"Sample mode has no usable sample data: {e}", False)
+    zetaris, chat = SampleZetaris(store, tracer), SampleChat(store, tracer)
+    try:
+        response = Orchestrator(settings, tracer, zetaris, chat, as_of=as_of, source_kind="sample").run(request)
+    except Exception as e:  # noqa: BLE001 - the contract wants an error shape, not a stack trace
+        return fail("internal_error", f"{type(e).__name__}: {e}", True)
+    misses = zetaris.misses + chat.misses
+    if not misses:
+        return response
+    shown = "; ".join(misses[:3]) + (f"; and {len(misses) - 3} more" if len(misses) > 3 else "")
+    message = (f"Sample mode replays only the captured example runs (input_examples/), and this request needs "
+               f"answers the sample does not hold: {shown}. Run it live, or recapture the sample after a prompt or "
+               f"statement change (scripts/capture_sample.py).")
+    tracer.emit(AGENT, "sample_miss", input_summary=request.input.query, output_summary=f"failed: {message}",
+                status="failed", details={"misses": misses})
+    return response.model_copy(update={"status": "failed", "result": None,
+                                       "error": RunError(type="sample_miss", message=message, recoverable=False)})

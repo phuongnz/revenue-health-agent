@@ -1,7 +1,8 @@
-# Only app/, run.py and requirements.txt go into the image.
+# Only app/, run.py, requirements.txt and sample mode's data go into the image.
 *
 !app/
 !run.py
 !requirements.txt
+!data/sample/
 **/__pycache__
 **/*.pyc

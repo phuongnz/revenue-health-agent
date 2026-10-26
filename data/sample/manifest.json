@@ -1,0 +1,70 @@
+{
+  "as_of": "2026-10-26",
+  "captured_at": "2026-10-26T13:14:59.062Z",
+  "notice": "A small extract of SEC EDGAR XBRL company facts (public domain; SEC asks that it not be bulk-redistributed) and of the EDGAR submissions header, as read through Zetaris, plus the Nemotron completions of the same runs. Only what the three example requests read is kept.",
+  "runs": [
+    {
+      "run_id": "example_1",
+      "input": "input_examples/example_1.json",
+      "status": "success",
+      "trace": "logs/trace-example_1.jsonl",
+      "statements": [
+        "03454c1a299e2cfb",
+        "14ec4a6743d4093a",
+        "7bc504ed785cd050",
+        "b1066d67aa35528f",
+        "d052fabd0a3a5620"
+      ],
+      "completions": [
+        "017f5aeab3ae3aae",
+        "17b3435a4e35d98e",
+        "1e3f042d1d1aa33e",
+        "bb2ba98f9d3911b5",
+        "c5a765c679090c29",
+        "ed5a885ceedd13e2"
+      ]
+    },
+    {
+      "run_id": "example_2",
+      "input": "input_examples/example_2.json",
+      "status": "success",
+      "trace": "logs/trace-example_2.jsonl",
+      "statements": [
+        "03454c1a299e2cfb",
+        "47121a70216bc95f",
+        "7bc504ed785cd050",
+        "d052fabd0a3a5620"
+      ],
+      "completions": [
+        "3104d6e68a5e2970",
+        "926e1cfdde0db603"
+      ]
+    },
+    {
+      "run_id": "example_3",
+      "input": "input_examples/example_3.json",
+      "status": "success",
+      "trace": "logs/trace-example_3.jsonl",
+      "statements": [
+        "03454c1a299e2cfb",
+        "61568184eacdb284",
+        "7bc504ed785cd050",
+        "c4cca56c01a0147e",
+        "d052fabd0a3a5620",
+        "d0e8389664c0a394"
+      ],
+      "completions": [
+        "031225209a96f07c",
+        "043dd247e09ce442",
+        "073b325e5b5531b1",
+        "0b206cf110f6f935",
+        "161fd2f6ce13ef51",
+        "5e55d1431a9b60bf",
+        "74016d9530341433",
+        "8f00e512d1f0857e",
+        "e893bd6cab62adaf",
+        "f5e13e01e4b19c21"
+      ]
+    }
+  ]
+}

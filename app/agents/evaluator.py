@@ -11,6 +11,12 @@ Two checks, in this order:
    and accepts it or rejects it with a reason, and gives a confidence. A model failure is
    not a run failure: the code verdicts stand and the outcome says so.
 
+A third check holds the model's prose to the findings: `check_explanation` reads the
+explanation the Analyst model wrote for a step (or any model-written note) against the
+company's accepted findings and the data it was given, and names the contradiction, if
+any. The orchestrator sends a contradicting explanation back once and then falls back
+to the findings alone; the Reporter runs the same check before printing any of it.
+
 A finding that fails either check goes back to the Analyst once, which re-derives it
 from the rows. If the rows do not yield it, or it fails the support check again, it is
 recorded as unsupported; if the model rejects it again, it is rejected with the model's
@@ -81,6 +87,7 @@ class Outcome:
     retry: RetryRequest | None = None
     revision_count: int = 0
     notes: list[str] = field(default_factory=list)  # the Evaluator's findings about the findings
+    critiques: list[tuple[str, str]] = field(default_factory=list)  # (company, the model's word on the set)
     limitations: list[str] = field(default_factory=list)
     model_reviewed: bool = False
 
@@ -176,6 +183,158 @@ def check_support(finding: Finding, evidence: Evidence) -> str | None:
     return None
 
 
+# --- the model's prose against the findings ---------------------------------------------------
+
+_NEGATION_WORDS = {"no", "not", "never", "without", "nor", "neither", "none", "nothing", "cannot", "rather", "instead",
+                   "free"}
+_DENIAL_WORDS = {"no", "not", "never", "none", "nor", "neither", "nothing"}
+_COUNT_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+                "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+                "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20}
+_COUNTED = re.compile(r"\b(\d{1,3}|" + "|".join(_COUNT_WORDS) + r")\s+(?:[\w/'-]+\s+){0,3}?"
+                      r"(restat\w*|duplicat\w*|gaps?\b)", re.I)
+_COUNTED_KIND = {"restat": "restatement", "duplicat": "duplicate", "gap": "gap"}
+_WINDOW_LENGTH = re.compile(r"\b(\d{1,2}|" + "|".join(_COUNT_WORDS) + r")[- ]years?[- ](?:long )?"
+                            r"(?:window|range|span|horizon)\b", re.I)
+_REQUESTED_YEARS = re.compile(r"\bfiscal years (?:from )?(\d{4}) to (\d{4})\b", re.I)
+_NOT_BRIDGED = re.compile(r"(?:\bnot|n't|\bnever|\bcannot|\bfails? to|\bunable to)\s+(?:\w+\s+){0,2}?"
+                          r"(?:bridge|close|fill|resolve)\b", re.I)
+_BROKEN_SERIES = re.compile(r"\bmissing\s+(?:revenue|years|periods|data)\b|\bunaccounted\b|\bbreak in the series\b"
+                            r"|\bseries is (?:broken|interrupted)\b", re.I)
+_KIND_WORDS: dict[str, tuple[re.Pattern[str], set[str], str]] = {  # name -> (words, kinds that allow them, said as)
+    "gap": (re.compile(r"\bgaps?\b", re.I), {"gap"}, "a gap"),
+    "restatement": (re.compile(r"\brestat\w*", re.I), {"restatement"}, "a restatement"),
+    "duplicate": (re.compile(r"\bduplicat\w*|\bdouble[- ]count\w*", re.I), {"duplicate"}, "duplicated periods"),
+    "early stop": (re.compile(r"\b(?:stops?|stopped|ends?|ended) early\b", re.I), {"early_stop"}, "an early stop"),
+    "late start": (re.compile(r"\b(?:starts?|started|begins?|began) late\b", re.I), {"late_start"}, "a late start"),
+    "truncation": (re.compile(r"\btruncat\w*", re.I), {"early_stop", "late_start"}, "a truncated series"),
+}
+_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+_MONEY = re.compile(r"\$\s?(\d[\d,]*(?:\.\d+)?)(?:\s*(trillion|billion|million|thousand|bn|mn|tn|[bmkt])\b)?", re.I)
+_SCALE = {"trillion": 1e12, "tn": 1e12, "t": 1e12, "billion": 1e9, "bn": 1e9, "b": 1e9, "million": 1e6, "mn": 1e6,
+          "m": 1e6, "thousand": 1e3, "k": 1e3}
+MONEY_TOLERANCE = 0.006  # "$265.6 billion" quotes $265,595,000,000; a different figure is further off
+
+
+def _sentences(text: str) -> list[str]:
+    return [s for s in re.split(r"(?<=[.!?;])\s+|\n+", text) if s.strip()]
+
+
+def _negated(sentence: str, start: int) -> bool:
+    words = re.findall(r"[\w']+", sentence[:start].lower())[-4:]
+    return any(w in _NEGATION_WORDS or w.endswith("n't") for w in words)
+
+
+def _denied(sentence: str, start: int) -> bool:
+    words = re.findall(r"[\w']+", sentence[:start].lower())[-6:]
+    return any(w in _DENIAL_WORDS or w.endswith("n't") for w in words)
+
+
+def _denies(pattern: re.Pattern[str], text: str) -> bool:
+    """True when a sentence negates the pattern: "no duplicate", "none of the restatements"."""
+    return any(_denied(sentence, m.start()) for sentence in _sentences(text) for m in pattern.finditer(sentence))
+
+
+def _counts(findings: list[Finding]) -> dict[str, set[int]]:
+    """Per kind, the counts prose may quote: the company's total and each concept's."""
+    per: dict[str, Counter[str]] = {}
+    for f in findings:
+        per.setdefault(f.kind, Counter())[f.concept or ""] += 1
+    return {kind: {sum(c.values()), *c.values()} for kind, c in per.items()}
+
+
+def _asserts(pattern: re.Pattern[str], text: str) -> bool:
+    """True when a sentence uses the pattern without negating it. The reasons built on it
+    never quote the prose, so a contradicting sentence cannot travel into a note."""
+    return any(not _negated(sentence, m.start()) for sentence in _sentences(text) for m in pattern.finditer(sentence))
+
+
+def _amounts(text: str) -> list[float]:
+    out = []
+    for m in _MONEY.finditer(text):
+        try:
+            value = float(m.group(1).replace(",", ""))
+        except ValueError:
+            continue
+        out.append(value * _SCALE.get((m.group(2) or "").lower(), 1.0))
+    return out
+
+
+def _finding_text(findings: list[Finding]) -> str:
+    parts = []
+    for f in findings:
+        parts += [f.description, f.period or "", f.recommendation or ""]
+        for row in f.evidence:
+            parts += [str(row.get(k) or "") for k in ("period_start", "period_end", "filed_date")]
+            if row.get("value_usd") not in (None, ""):
+                parts.append(f"${row.get('value_usd')}")
+    return "\n".join(parts)
+
+
+def continuous_tag_changes(findings: list[Finding]) -> list[Finding]:
+    """Tag changes with no gap between the two concepts: the series runs on under the new tag."""
+    holes = {(g.company, g.concept) for g in findings if g.kind == "gap" and " -> " in (g.concept or "")}
+    return [f for f in findings if f.kind == "tag_change" and (f.company, f.concept) not in holes]
+
+
+def check_explanation(text: str, findings: list[Finding], given: str = "", company: str | None = None) -> str | None:
+    """None when the prose agrees with the findings; otherwise what it contradicts.
+
+    `findings` are the company's accepted findings, the truth the prose must not contradict;
+    `given` is everything else the writer was shown (its prompt), so a date or a figure it
+    quotes must come from one or the other. The checks are code and deliberately literal:
+    the findings' kinds have names, and prose that uses a name the findings do not carry,
+    or denies what a finding states, is sent back rather than printed.
+    """
+    if not text or not text.strip():
+        return None
+    who = company or (findings[0].company if findings else "this company")
+    kinds = {f.kind for f in findings}
+    for tag in continuous_tag_changes(findings):
+        old_last, _, new_first = (tag.period or "").partition("/")
+        handover = f"{old_last} / {new_first}"
+        if _NOT_BRIDGED.search(text):
+            return (f"it denies that the new concept carries the series on, but the code found {who}'s series "
+                    f"continuous across the tag change at {handover}")
+        if _asserts(_BROKEN_SERIES, text):
+            return (f"it speaks of missing revenue or a broken series, but the code found {who}'s series continuous "
+                    f"across the tag change at {handover}")
+    found = ", ".join(k.replace("_", " ") for k in sorted(kinds)) or "nothing wrong"
+    for name, (pattern, allowed_by, said) in _KIND_WORDS.items():
+        if kinds & allowed_by:
+            if name in ("gap", "restatement", "duplicate") and _denies(pattern, text):
+                return f"it denies {said}, but the code accepted {name} findings for {who}; the accepted findings are: {found}"
+            continue
+        if _asserts(pattern, text):
+            return f"it speaks of {said}, but the code found no {name} for {who}; the accepted findings are: {found}"
+    counts = _counts(findings)
+    for m in _COUNTED.finditer(text):
+        raw, word = m.group(1).lower(), m.group(2).lower()
+        n = int(raw) if raw.isdigit() else _COUNT_WORDS[raw]
+        kind = next(v for k, v in _COUNTED_KIND.items() if word.startswith(k))
+        if kind in counts and n not in counts[kind]:
+            told = " or ".join(str(c) for c in sorted(counts[kind]))
+            return f"it counts {n} {kind} finding(s), but the code accepted {told} for {who}"
+    window = _REQUESTED_YEARS.search(given)
+    if window:
+        first, last = int(window.group(1)), int(window.group(2))
+        length = last - first + 1
+        for m in _WINDOW_LENGTH.finditer(text):
+            raw = m.group(1).lower()
+            n = int(raw) if raw.isdigit() else _COUNT_WORDS[raw]
+            if n not in (length, length - 1):
+                return f"it calls the window {n} years long, but the request covers fiscal years {first} to {last} ({length} years)"
+    source = f"{given}\n{_finding_text(findings)}"
+    for d in _DATE.findall(text):
+        if d not in source:
+            return f"it quotes the date {d}, which is in none of the findings or the data it was given"
+    allowed = _amounts(source)
+    for value in _amounts(text):
+        if value and not any(abs(value - a) <= MONEY_TOLERANCE * a for a in allowed if a):
+            return f"it quotes the figure ${value:,.0f}, which is in none of the findings or the data it was given"
+    return None
+
+
 # --- the critique ------------------------------------------------------------------------------
 
 
@@ -190,12 +349,18 @@ def _evidence_lines(finding: Finding, limit: int = 4) -> list[str]:
     return lines
 
 
-def critique_prompt(items: list[tuple[str, Finding, str | None]], ctx: SeriesContext) -> str:
+def critique_prompt(items: list[tuple[str, Finding, str | None]], ctx: SeriesContext,
+                    totals: Counter[str] | None = None) -> str:
     lines = [
         f"Company: {ctx.company}. Window: fiscal years from {ctx.from_year}, data expected through "
         f"{ctx.expected_through}. Each finding below was computed by code from the cited rows.",
-        "",
     ]
+    shown = Counter(f.kind for _, f, _ in items)
+    if totals and totals != shown:
+        lines.append("Only a sample is shown. Findings in all, by kind: "
+                     + ", ".join(f"{n} {k}" for k, n in sorted(totals.items())) + "; quote these totals, not the "
+                     "sample's size.")
+    lines.append("")
     for key, f, note in items:
         lines.append(f"{key} [{f.kind}] period {f.period} concept {short_concept(f.concept or '')}")
         lines.append(f"  claim: {f.description}")
@@ -259,7 +424,7 @@ class Evaluator:
                 ranked.append(f)
         ranked = ranked[:MODEL_REVIEW_LIMIT]
         keyed = [(f"F{i + 1}", f, notes.get(f.id)) for i, f in enumerate(ranked)]
-        messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": critique_prompt(keyed, ctx)}]
+        messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": critique_prompt(keyed, ctx, Counter(f.kind for f in findings))}]
         try:
             result = self.chat.chat(self.name, messages, max_tokens=self.max_tokens, temperature=0.1,
                                     purpose=f"critique round {round_no}", target_agent="Analyst",
@@ -276,8 +441,8 @@ class Evaluator:
         rejected = sum(1 for r in by_id.values() if r["verdict"] == "reject")
         confs = [r["confidence"] for r in by_id.values() if r["confidence"] is not None]
         out.model_reviewed = True
-        if critique:
-            out.notes.append(f"{ctx.company} {short_concept(ctx.concept)}, round {round_no}: {critique}")
+        if critique:  # model prose: the Reporter holds it to the findings before printing it
+            out.critiques.append((ctx.company, f"{ctx.company} {short_concept(ctx.concept)}, round {round_no}: {critique}"))
         self.tracer.emit(
             self.name, "critique",
             input_summary=f"{len(keyed)} findings for {ctx.company} {short_concept(ctx.concept)} (round {round_no})",
@@ -292,6 +457,20 @@ class Evaluator:
                      "unreviewed": [f.id for f in findings if f.id not in by_id]},
         )
         return by_id
+
+    def review_explanation(self, text: str, findings: list[Finding], given: str, company: str, label: str,
+                           attempt: int = 1) -> str | None:
+        """The prose check on one step's explanation, traced. None when it agrees."""
+        reason = check_explanation(text, findings, given, company)
+        accepted = [f for f in findings if f.status == "accepted"]
+        self.tracer.emit(
+            self.name, "review_explanation",
+            input_summary=f"explanation of {label} (attempt {attempt}) against {len(accepted)} accepted findings",
+            output_summary=f"contradicts the findings: {reason}" if reason else "agrees with the findings",
+            target_agent="Analyst" if reason else "Reporter", retry_count=attempt - 1,
+            status="needs_revision" if reason else "success",
+        )
+        return reason
 
     def evaluate(
         self, findings: list[Finding], evidence: Evidence, analyst: Analyst, *,

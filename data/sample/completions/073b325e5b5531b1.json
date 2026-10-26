@@ -1,0 +1,80 @@
+{
+ "key": "073b325e5b5531b1",
+ "agent": "Evaluator",
+ "purpose": "critique round 1",
+ "prompt_preview": "Company: Target. Window: fiscal years from 2009, data expected through 2025-10-26. Each finding below was computed by code from the cited rows. Only a sample i…",
+ "captured_in": [
+  "example_3"
+ ],
+ "text": "{\"reviews\": [{\"id\": \"F1\", \"verdict\": \"accept\", \"reason\": \"The two cited rows show Revenues ending 2015-01-31 and RevenueFromContractWithCustomerExcludingAssessedTax starting 2016-01-31, confirming a tag change with a one-year hole.\", \"confidence\": 0.98}, {\"id\": \"F2\", \"verdict\": \"accept\", \"reason\": \"The row shows the first appearance of RevenueFromContractWithCustomerExcludingAssessedTax is as a comparative in a 2019 10-K, 774 days after the period ended, supporting a late start for the series.\", \"confidence\": 0.97}, {\"id\": \"F3\", \"verdict\": \"accept\", \"reason\": \"The same two rows demonstrate no revenue reported under either concept for the fiscal year 2015-02-01 to 2016-01-30, confirming a one-year gap.\", \"confidence\": 0.99}, {\"id\": \"F4\", \"verdict\": \"accept\", \"reason\": \"The 10-Q and 10-K rows for 2017-01-29/2017-04-29 show a $228M increase (1.43%), matching the restatement claim.\", \"confidence\": 1.0}, {\"id\": \"F5\", \"verdict\": \"accept\", \"reason\": \"The 10-Q and 10-K rows for 2017-04-30/2017-07-29 show a $224M increase (1.37%), matching the restatement claim.\", \"confidence\": 1.0}, {\"id\": \"F6\", \"verdict\": \"accept\", \"reason\": \"The 10-Q and 10-K rows for 2018-02-04/2018-05-05 show a $225M increase (1.36%), matching the restatement claim.\", \"confidence\": 1.0}, {\"id\": \"F7\", \"verdict\": \"accept\", \"reason\": \"Two filings (10-Q and 10-K) report the identical value for 2017-07-30/2017-10-28, confirming a duplicate that would double-count if summed.\", \"confidence\": 1.0}, {\"id\": \"F8\", \"verdict\": \"accept\", \"reason\": \"Three filings (two 10-Ks and a 10-Q) report the identical value for 2018-02-04/2018-05-05, confirming a duplicate.\", \"confidence\": 1.0}, {\"id\": \"F9\", \"verdict\": \"accept\", \"reason\": \"Three filings (two 10-Ks and a 10-Q) report the identical value for 2018-05-06/2018-08-04, confirming a duplicate.\", \"confidence\": 1.0}], \"critique\": \"All nine findings are well-supported by the cited rows; the tag change, late start, gap, restatements, and duplicates are correctly identified and quantified. The set gives an equity analyst a clear picture of concept migration, a missing fiscal year, minor quarterly restatements, and pervasive duplicate rows that would inflate sums if not deduplicated.\"}",
+ "requested_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "routed_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "receipt": {
+  "schema": "meterless.compute_receipt.v1",
+  "receipt_id": "rcpt_req_gqvek399",
+  "decision_id": "req_gqvek399",
+  "requested_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "provider_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "routed_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "winning_route": {
+   "model": "nvidia/nemotron-3-ultra-550b-a55b",
+   "label": "Nemotron 3 Ultra 550B A55B",
+   "provider": "nvidia",
+   "kind": "cloud",
+   "tier": "C"
+  },
+  "requires_review": false,
+  "phases": [
+   {
+    "phase": "final_synthesis",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "ms": 70820,
+    "tokensIn": 4135,
+    "tokensOut": 3446,
+    "outputTps": 48.65857102513415,
+    "coherence": null,
+    "tier": "C",
+    "reflex_decided_in_ms": 0.2
+   }
+  ],
+  "usage": {
+   "input_tokens": 4135,
+   "output_tokens": 3446,
+   "total_tokens": 7581,
+   "output_tps": 48.65857102513415,
+   "latency_ms": 70820
+  },
+  "cost": {
+   "actual_usd": 0,
+   "naive_usd": 0,
+   "baseline": {
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "label": "Nemotron 3 Ultra 550B A55B",
+    "source": "mode-default-frontier"
+   },
+   "verifier_usd": 0,
+   "race_overhead_usd": 0
+  },
+  "savings": {
+   "amount": 0,
+   "currency": "USD",
+   "vs": "Nemotron 3 Ultra 550B A55B",
+   "baseline_source": "mode-default-frontier"
+  },
+  "cache": {
+   "status": "miss",
+   "losers_reclaimed": 0,
+   "partials_reclaimed": 0
+  },
+  "mode": "auto",
+  "scope": "user",
+  "app": "revenue-health-agent",
+  "from_cache": false
+ },
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 4135,
+  "completion_tokens": 3446,
+  "total_tokens": 7581
+ }
+}

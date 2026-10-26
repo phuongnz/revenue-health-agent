@@ -7,6 +7,11 @@ periods and what is wrong with them, the confidence, the cited rows, what to do,
 explanation the model wrote in the engine step. Rejected and unsupported findings never
 appear as findings; the Evaluator's notes about them do, under the review.
 
+The code findings are the truth. Model-written prose (a step's explanation, the
+critique's summary, a review reason) is printed only where `check_explanation` finds it
+agrees with the company's accepted findings; otherwise the findings speak alone. The
+engine's reflection stays in the trace and never enters the report.
+
 Code only, so a report can always be written, whatever failed before it.
 """
 
@@ -19,7 +24,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app.agents.analyst import short_concept
+from app.agents.analyst import short_concept, starts_with_the_tag
+from app.agents.evaluator import check_explanation
 from app.schemas import Finding, RunResult
 from app.tracing import NullTracer, Tracer
 
@@ -39,22 +45,37 @@ STANDING_LIMITATIONS = (
 
 
 @dataclass
+class Explanation:
+    """One step's explanation. `by` is "model" or "code"; a model's carries what it was
+    shown (`given`, where its dates and figures must come from) and the code-written text
+    that replaces it if it disagrees with the findings."""
+
+    company: str
+    step: str
+    text: str
+    by: str = "model"
+    given: str = ""
+    fallback: str = ""
+
+
+@dataclass
 class ReportInput:
     """What the run gathered for the Reporter, besides the findings."""
 
     run_id: str
     companies: list[str]
-    explanations: dict[str, list[str]] = field(default_factory=dict)  # company -> model-written paragraphs
+    explanations: list[Explanation] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
-    evaluator_notes: list[str] = field(default_factory=list)
+    evaluator_notes: list[str] = field(default_factory=list)  # code-written
+    critiques: list[tuple[str, str]] = field(default_factory=list)  # (company, model-written critique)
     steps_planned: int = 0
     steps_with_rows: int = 0
     rejected: int = 0
     unsupported: int = 0
     revision_count: int = 0
+    explanations_sent_back: int = 0
     agents_used: list[str] = field(default_factory=list)
     trace_path: str | None = None
-    reflection: str | None = None
 
 
 def _unique(items: Iterable[str]) -> list[str]:
@@ -73,15 +94,18 @@ def ordered(findings: Iterable[Finding]) -> list[Finding]:
 
 def explained_by_tag_change(findings: Iterable[Finding]) -> dict[str, str]:
     """Finding id -> note, for the old concept's stop and the new concept's late start
-    that a continuous tag change accounts for."""
+    that a tag change accounts for: continuous, or the two ends of a hole that the gap
+    finding reports."""
     findings = list(findings)
     out: dict[str, str] = {}
     for tag in (f for f in findings if f.kind == "tag_change"):
         old, _, new = (tag.concept or "").partition(" -> ")
         old_last, _, new_first = (tag.period or "").partition("/")
         if any(g.kind == "gap" and g.concept == tag.concept and g.company == tag.company for g in findings):
-            continue
-        note = f"Explained by the tag change from {short_concept(old)} to {short_concept(new)} ({old_last} / {new_first})."
+            note = (f"One end of the hole between {short_concept(old)} and {short_concept(new)} ({old_last} / "
+                    f"{new_first}); see the missing periods.")
+        else:
+            note = f"Explained by the tag change from {short_concept(old)} to {short_concept(new)} ({old_last} / {new_first})."
         for f in findings:
             if f.company != tag.company:
                 continue
@@ -111,7 +135,13 @@ def company_headline(company: str, findings: list[Finding]) -> str:
     for stop in by_kind.get("early_stop", []):
         parts.append(f"the {short_concept(stop.concept or '')} series stops at {(stop.period or '').strip('/')}")
     for start in by_kind.get("late_start", []):
-        parts.append(f"the {short_concept(start.concept or '')} series starts late, at {(start.period or '').split('/')[0]}")
+        concept, first = short_concept(start.concept or ""), (start.period or "").split("/")[0]
+        handed_over = any(t.kind == "tag_change" and (t.concept or "").endswith(f" -> {start.concept}") for t in findings)
+        if starts_with_the_tag(start) and not handed_over:
+            parts.append(f"the {concept} series starts at {first}, where the company began using the tag; earlier "
+                         f"revenue sits under a concept this run does not read")
+        else:
+            parts.append(f"the {concept} series starts late, at {first}")
     for kind, one, many in (
         ("gap", "gap", "gaps"),
         ("restatement", "restated period", "restated periods"),
@@ -146,8 +176,37 @@ def recommended_actions(findings: list[Finding]) -> list[str]:
     return _unique(actions)
 
 
+CODE_REASON = "the cited rows support it; the critique's wording contradicted a code finding and is not kept"
+
+
+def vet_reasons(accepted: list[Finding]) -> list[Finding]:
+    """An accepted finding's review reason is the model's words: kept only where they agree
+    with the company's accepted findings."""
+    by_company: dict[str, list[Finding]] = defaultdict(list)
+    for f in accepted:
+        by_company[f.company].append(f)
+    out = []
+    for f in accepted:
+        if f.evaluator_reason and check_explanation(f.evaluator_reason, by_company[f.company], company=f.company):
+            f = f.model_copy(update={"evaluator_reason": CODE_REASON})
+        out.append(f)
+    return out
+
+
+def vetted_critiques(findings: list[Finding], critiques: Iterable[tuple[str, str]]) -> list[str]:
+    """The critique summaries that agree with their company's accepted findings; the others
+    are replaced by a line saying they were left out, and why."""
+    accepted = [f for f in findings if f.status == "accepted"]
+    out = []
+    for company, text in critiques:
+        reason = check_explanation(text, [f for f in accepted if f.company == company], company=company)
+        head = text.split(":", 1)[0]
+        out.append(text if reason is None else f"{head}: the critique's summary is left out: {reason}.")
+    return out
+
+
 def build_result(findings: list[Finding], report: ReportInput) -> RunResult:
-    accepted = ordered(f for f in findings if f.status == "accepted")
+    accepted = vet_reasons(ordered(f for f in findings if f.status == "accepted"))
     by_company: dict[str, list[Finding]] = defaultdict(list)
     for f in accepted:
         by_company[f.company].append(f)
@@ -157,6 +216,9 @@ def build_result(findings: list[Finding], report: ReportInput) -> RunResult:
     confidence = round(max(0.0, min(1.0, base * coverage)), 3)
     review = (f" The Evaluator reviewed every finding: {len(accepted)} accepted, {report.rejected} rejected, "
               f"{report.unsupported} unsupported, {report.revision_count} sent back to the Analyst.")
+    if report.explanations_sent_back:
+        n = report.explanations_sent_back
+        review += f" {n} explanation{'s' if n > 1 else ''} contradicting the findings went back to the Analyst."
     if not report.steps_with_rows:
         summary = "No revenue rows could be read, so nothing could be checked." + review
     else:
@@ -180,6 +242,18 @@ def _rows_cited(f: Finding, limit: int = 3) -> str:
     return ", ".join(ids[:limit]) + more
 
 
+def explanation_text(e: Explanation, findings: list[Finding]) -> tuple[str, str | None]:
+    """What the report prints for one step's explanation, and why the model's words were
+    replaced (None when they are printed): code-written text is printed as is; a model's
+    only where it agrees with the company's accepted findings."""
+    if e.by != "model":
+        return e.text, None
+    reason = check_explanation(e.text, findings, e.given, e.company)
+    if reason is None:
+        return e.text, None
+    return e.fallback or "", reason
+
+
 def render_markdown(result: RunResult, report: ReportInput) -> str:
     lines = [f"# Revenue series health report: {', '.join(report.companies) or 'no company'}", "",
              f"Run `{report.run_id}`. Overall confidence {result.confidence:.2f}.", "", "## Summary", "",
@@ -187,11 +261,16 @@ def render_markdown(result: RunResult, report: ReportInput) -> str:
     by_company: dict[str, list[Finding]] = defaultdict(list)
     for f in result.findings:
         by_company[f.company].append(f)
+    replaced = []
     for company in report.companies:
         found = by_company.get(company, [])
         lines += [f"## {company}", ""]
-        for paragraph in report.explanations.get(company, []):
-            lines += [paragraph.strip(), ""]
+        for e in (e for e in report.explanations if e.company == company):
+            text, why = explanation_text(e, found)
+            if why:
+                replaced.append(f"The model's explanation of {e.step} is replaced by the findings' own summary: {why}.")
+            if text.strip():
+                lines += [text.strip(), ""]
         explained = explained_by_tag_change(found)
         main = [f for f in found if f.kind != "duplicate"]
         dups = [f for f in found if f.kind == "duplicate"]
@@ -214,10 +293,10 @@ def render_markdown(result: RunResult, report: ReportInput) -> str:
     lines += ["## Limitations", ""] + [f"- {item}" for item in result.limitations] + [""]
     lines += ["## Review", "",
               f"Agents: {', '.join(report.agents_used)}. Findings sent back to the Analyst: {report.revision_count}; "
-              f"rejected: {report.rejected}; unsupported: {report.unsupported}.", ""]
-    lines += [f"- {note}" for note in report.evaluator_notes]
-    if report.reflection:
-        lines += ["", f"Engine reflection: {' '.join(report.reflection.split())[:1200]}"]
+              f"rejected: {report.rejected}; unsupported: {report.unsupported}; explanations sent back: "
+              f"{report.explanations_sent_back}.", ""]
+    notes = [*vetted_critiques(result.findings, report.critiques), *report.evaluator_notes, *replaced]
+    lines += [f"- {note}" for note in notes]
     if report.trace_path:
         lines += ["", f"Trace: `{report.trace_path}`"]
     return "\n".join(lines).rstrip() + "\n"

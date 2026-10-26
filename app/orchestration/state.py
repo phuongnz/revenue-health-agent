@@ -16,6 +16,7 @@ from typing import Any
 from app.agents.analyst import SeriesContext, facts_from_rows, short_concept
 from app.agents.evaluator import Outcome
 from app.agents.planner import Plan, PlanStep
+from app.agents.reporter import Explanation
 from app.agents.retriever import Rows
 from app.schemas import Finding, RunRequest
 
@@ -60,13 +61,15 @@ class RunState:
     findings: list[Finding] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    critiques: list[tuple[str, str]] = field(default_factory=list)  # (company, model-written critique)
     decisions: list[str] = field(default_factory=list)
-    explanations: dict[str, list[str]] = field(default_factory=dict)
+    explanations: list[Explanation] = field(default_factory=list)
     profiles: dict[str, dict[str, Any]] = field(default_factory=dict)  # cik without leading zeros -> profile row
     dq_records: list[dict[str, Any]] = field(default_factory=list)
     dq_statement: str | None = None
     agents: list[str] = field(default_factory=list)
     revision_count: int = 0
+    explanations_sent_back: int = 0
     fallbacks: int = 0
     reflection: str | None = None
 
@@ -77,6 +80,9 @@ class RunState:
     @property
     def agents_used(self) -> list[str]:
         return [a for a in AGENT_ORDER if a in self.agents] + [a for a in self.agents if a not in AGENT_ORDER]
+
+    def accepted_for(self, company: str) -> list[Finding]:
+        return [f for f in self.findings if f.status == "accepted" and f.company == company]
 
     @property
     def steps_with_rows(self) -> int:

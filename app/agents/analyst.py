@@ -39,6 +39,7 @@ GAP_TOLERANCE_DAYS = 7
 DEFAULT_FROM_YEAR = 2009  # the first year of mandatory XBRL financial data for the largest filers
 STALE_AFTER_DAYS = 365
 MAX_EVIDENCE = 6
+COMPARATIVE_AFTER_DAYS = 180  # a period's own filing comes within ~90 days of its end; a later filing's comparative does not
 
 CONFIDENCE: dict[str, float] = {
     "duplicate": 0.95,
@@ -382,6 +383,25 @@ def find_early_stop(facts: list[Fact], ctx: SeriesContext) -> list[Finding]:
     )]
 
 
+def carried_back(fact: Fact) -> bool:
+    """True when the fact is a comparative carried back in a later filing: filed long after
+    its period ended, so the concept was not in use when that period was first reported."""
+    return fact.filed is not None and (fact.filed - fact.end).days > COMPARATIVE_AFTER_DAYS
+
+
+def starts_with_the_tag(finding: Finding) -> bool:
+    """A late start whose earliest rows are all comparatives carried back in a later filing:
+    the series begins where the company started using the concept, not where its revenue
+    begins. Read from the finding's own evidence rows, so the Reporter can tell too."""
+    if finding.kind != "late_start" or not finding.evidence:
+        return False
+    for row in finding.evidence:
+        end, filed = parse_date(row.get("period_end")), parse_date(row.get("filed_date"))
+        if end is None or filed is None or (filed - end).days <= COMPARATIVE_AFTER_DAYS:
+            return False
+    return True
+
+
 def find_late_start(facts: list[Fact], ctx: SeriesContext) -> list[Finding]:
     starts = [f for f in facts if f.start is not None]
     if not starts:
@@ -391,15 +411,30 @@ def find_late_start(facts: list[Fact], ctx: SeriesContext) -> list[Finding]:
         return []
     first = sorted((f for f in starts if f.start == first_start), key=lambda f: (not f.is_annual, f.sort_filed()))
     head = first[0]
-    return [_make(
-        ctx, "late_start", _period(first_start, head.end),
-        f"The {short_concept(ctx.concept)} series starts late: its earliest period begins {first_start} "
-        f"({head.length}, {money(head.value)}, from {head.cite()}), while the request covers fiscal years from "
-        f"{ctx.from_year}.",
-        [(f, ctx) for f in first],
-        f"Look for periods before {first_start} under another revenue concept before using this series for "
-        f"history earlier than {first_start.year}.",
-    )]
+    concept = short_concept(ctx.concept)
+    if all(carried_back(f) for f in first):
+        # Apple's us-gaap/Revenues: its earliest period, FY2016, exists only as a comparative in
+        # the FY2018 10-K, the first filing that used the tag. The data starts there; the
+        # company's earlier revenue was filed under another tag.
+        description = (
+            f"The {concept} series starts late, at {first_start}, because the company began using this concept "
+            f"late: its earliest period ({head.length}, {money(head.value)}) appears only as a comparative in "
+            f"{head.cite()}, {(head.filed - head.end).days} days after the period ended. Earlier years sit under "  # type: ignore[operator]
+            f"another revenue concept or predate the company's XBRL filings, so this marks where the tag starts "
+            f"in the data, not revenue missing inside the series; the request covers fiscal years from {ctx.from_year}.")
+        recommendation = (
+            f"For history before {first_start}, read the company's earlier revenue concept (for example "
+            f"us-gaap/SalesRevenueNet, retired in the 2018 taxonomy); this series cannot supply it.")
+    else:
+        description = (
+            f"The {concept} series starts late: its earliest period begins {first_start} "
+            f"({head.length}, {money(head.value)}, from {head.cite()}), while the request covers fiscal years from "
+            f"{ctx.from_year}.")
+        recommendation = (
+            f"Look for periods before {first_start} under another revenue concept before using this series for "
+            f"history earlier than {first_start.year}.")
+    return [_make(ctx, "late_start", _period(first_start, head.end), description, [(f, ctx) for f in first],
+                  recommendation)]
 
 
 def analyze_series(rows: Iterable[Mapping[str, Any]], ctx: SeriesContext) -> list[Finding]:

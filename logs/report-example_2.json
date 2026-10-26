@@ -1,0 +1,11 @@
+{
+  "summary": "Oracle: no problem found in the requested window. The Evaluator reviewed every finding: 0 accepted, 0 rejected, 0 unsupported, 0 sent back to the Analyst.",
+  "findings": [],
+  "confidence": 0.85,
+  "limitations": [
+    "Only the XBRL concepts us-gaap/Revenues and us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax are read; revenue a company reported under another tag is not seen.",
+    "Facts are as reported to SEC EDGAR's XBRL API and read through Zetaris; the filings' text is not read.",
+    "The report judges the data's reliability, not the companies."
+  ],
+  "recommended_actions": []
+}

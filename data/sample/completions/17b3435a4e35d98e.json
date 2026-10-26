@@ -1,0 +1,80 @@
+{
+ "key": "17b3435a4e35d98e",
+ "agent": "Evaluator",
+ "purpose": "critique round 1",
+ "prompt_preview": "Company: Apple. Window: fiscal years from 2009, data expected through 2025-10-26. Each finding below was computed by code from the cited rows. Only a sample is…",
+ "captured_in": [
+  "example_1"
+ ],
+ "text": "{\"reviews\": [{\"id\": \"F1\", \"verdict\": \"accept\", \"reason\": \"The evidence rows show contiguous periods (2018-09-29 end under Revenues, 2018-09-30 start under RevenueFromContractWithCustomerExcludingAssessedTax) with no gap, and the new tag provides comparatives back to 2016, confirming continuity.\", \"confidence\": 0.95}, {\"id\": \"F2\", \"verdict\": \"accept\", \"reason\": \"The row shows the earliest annual period for the new tag appears only as a comparative in a 2019 filing, 761 days after the period ended, confirming a late start of the concept, not missing revenue.\", \"confidence\": 0.95}, {\"id\": \"F3\", \"verdict\": \"accept\", \"reason\": \"Two rows from different filings (10-Q and 10-K) report the identical value for the same quarterly period, so summing would double-count.\", \"confidence\": 0.95}, {\"id\": \"F4\", \"verdict\": \"accept\", \"reason\": \"Two rows from different filings (10-Q and 10-K) report the identical value for the same quarterly period, so summing would double-count.\", \"confidence\": 0.95}, {\"id\": \"F5\", \"verdict\": \"accept\", \"reason\": \"Two rows from different filings (10-Q and 10-K) report the identical value for the same quarterly period, so summing would double-count.\", \"confidence\": 0.95}], \"critique\": \"The set correctly identifies a tag change with continuity, a late-starting concept due to ASC 606 adoption, and three quarterly duplicates across 10-Q/10-K filings. All findings are well-evidenced and relevant for an analyst assessing data quality.\"}",
+ "requested_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "routed_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "receipt": {
+  "schema": "meterless.compute_receipt.v1",
+  "receipt_id": "rcpt_req_u35rmmiq",
+  "decision_id": "req_u35rmmiq",
+  "requested_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "provider_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "routed_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "winning_route": {
+   "model": "nvidia/nemotron-3-ultra-550b-a55b",
+   "label": "Nemotron 3 Ultra 550B A55B",
+   "provider": "nvidia",
+   "kind": "cloud",
+   "tier": "C"
+  },
+  "requires_review": false,
+  "phases": [
+   {
+    "phase": "final_synthesis",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "ms": 21574,
+    "tokensIn": 2612,
+    "tokensOut": 1599,
+    "outputTps": 74.1169926763697,
+    "coherence": null,
+    "tier": "C",
+    "reflex_decided_in_ms": 0.2
+   }
+  ],
+  "usage": {
+   "input_tokens": 2612,
+   "output_tokens": 1599,
+   "total_tokens": 4211,
+   "output_tps": 74.1169926763697,
+   "latency_ms": 21574
+  },
+  "cost": {
+   "actual_usd": 0,
+   "naive_usd": 0,
+   "baseline": {
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "label": "Nemotron 3 Ultra 550B A55B",
+    "source": "mode-default-frontier"
+   },
+   "verifier_usd": 0,
+   "race_overhead_usd": 0
+  },
+  "savings": {
+   "amount": 0,
+   "currency": "USD",
+   "vs": "Nemotron 3 Ultra 550B A55B",
+   "baseline_source": "mode-default-frontier"
+  },
+  "cache": {
+   "status": "miss",
+   "losers_reclaimed": 0,
+   "partials_reclaimed": 0
+  },
+  "mode": "auto",
+  "scope": "user",
+  "app": "revenue-health-agent",
+  "from_cache": false
+ },
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 2612,
+  "completion_tokens": 1599,
+  "total_tokens": 4211
+ }
+}

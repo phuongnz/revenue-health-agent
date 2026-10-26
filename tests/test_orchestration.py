@@ -69,7 +69,7 @@ class FakeModel:
                     "critique": "Supported."}
             return Reply(json.dumps(body), "nvidia/nemotron-3-ultra-550b-a55b")
         if kw.get("purpose") == "engine reflection":
-            return Reply("Ratify: the goal is met.", "nvidia/nemotron-3.5-lightning-30b-a3b")
+            return Reply("The new concept does not bridge the gap. **Verdict**: Refine.", "nvidia/nemotron-3.5-lightning-30b-a3b")
         return Reply("Apple's old revenue tag ends in 2018 and the new one carries on.\n[STATE_CHECKPOINT]\nCOMPLETED: x",
                      "nvidia/nemotron-3.5-lightning-30b-a3b")
 
@@ -109,6 +109,7 @@ def test_apple_run_retries_with_the_second_concept_and_reports_the_2018_stop(tmp
     assert (tmp_path / "report-t1.md").exists() and (tmp_path / "trace-t1.jsonl").exists()
     md = (tmp_path / "report-t1.md").read_text()
     assert "Apple's old revenue tag ends in 2018" in md and "COMPLETED: x" not in md
+    assert "Verdict" not in md and "bridge" not in md, "the engine's reflection stays in the trace"
     RunResponse.model_validate(response.model_dump(mode="json"))
 
 
@@ -156,5 +157,56 @@ def test_run_request_without_credentials_returns_the_error_shape(tmp_path):
     settings = Settings.from_env({"LOG_DIR": str(tmp_path)})
     response = run_request(RunRequest(run_id="t2", input={"query": "Apple"}), settings, stream=None)
     assert response.status == "failed" and response.error.type == "configuration"
+    # sample mode needs no credentials; a request other than the captured examples is not in the sample
     sample = Settings.from_env({"LOG_DIR": str(tmp_path), "SAMPLE_MODE": "true"})
-    assert run_request(RunRequest(run_id="t3", input={"query": "Apple"}), sample, stream=None).error.type == "not_available"
+    assert run_request(RunRequest(run_id="t3", input={"query": "Apple"}), sample, stream=None).error.type == "sample_miss"
+
+
+CONTRADICTING = ("The RevenueFromContractWithCustomerExcludingAssessedTax series cannot represent the full request, "
+                 "creating a coverage gap that the early_stop and late_start flags do not resolve.")
+
+
+class ContradictingModel(FakeModel):
+    """The Analyst model writes the live run's contradicting sentence for the RFCC step;
+    `rewrite` is what it answers when the Evaluator sends that back."""
+
+    def __init__(self, rewrite):
+        super().__init__()
+        self.rewrite = rewrite
+
+    def chat(self, agent, messages, **kw):
+        purpose = kw.get("purpose") or ""
+        if purpose.startswith("explain step 2"):
+            self.calls.append((agent, purpose, messages[-1]["content"]))
+            return Reply(CONTRADICTING, "nvidia/nemotron-3.5-lightning-30b-a3b")
+        if purpose.startswith("revise explanation"):
+            self.calls.append((agent, purpose, messages[-1]["content"]))
+            return Reply(self.rewrite, "nvidia/nemotron-3.5-lightning-30b-a3b")
+        return super().chat(agent, messages, **kw)
+
+
+def test_a_contradicting_explanation_goes_back_once_then_the_findings_stand_alone(tmp_path):
+    model = ContradictingModel(rewrite=CONTRADICTING)
+    response, events = run(tmp_path, model=model)
+    md = (tmp_path / "report-t1.md").read_text()
+    assert "do not resolve" not in md and "coverage gap" not in md, "the contradiction never reaches the report"
+    assert "cannot represent" not in (tmp_path / "report-t1.json").read_text()
+    reviews = [e for e in events if e.action == "review_explanation"]
+    assert [e.status for e in reviews] == ["success", "needs_revision", "needs_revision"]
+    actions = [(e.agent_name, e.action) for e in events]
+    assert ("Evaluator", "send_back") in actions and ("Evaluator", "explain_fallback") in actions
+    revise = next(c for c in model.calls if c[1].startswith("revise explanation"))
+    assert "continuous across the tag change at 2018-09-29 / 2018-09-30" in revise[2], "the reason goes back with it"
+    assert "Apple us-gaap/RevenueFromContractWithCustomerExcludingAssessedTax: 7 rows" in md, "the findings speak alone"
+    assert response.collaboration.revision_count == 1
+    assert any("contradicted the findings twice" in n for n in response.collaboration.evaluator_findings)
+    assert response.status == "success", "a dropped explanation is the loop working, not a failure"
+
+
+def test_a_rewrite_that_agrees_with_the_findings_is_printed(tmp_path):
+    rewrite = "Apple's revenue continues under the new concept: a tag change, not missing revenue."
+    response, events = run(tmp_path, model=ContradictingModel(rewrite=rewrite))
+    md = (tmp_path / "report-t1.md").read_text()
+    assert rewrite in md and "do not resolve" not in md
+    assert ("Evaluator", "explain_fallback") not in [(e.agent_name, e.action) for e in events]
+    assert "1 explanation contradicting the findings went back to the Analyst" in response.result.summary
