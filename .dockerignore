@@ -1,0 +1,7 @@
+# Only app/, run.py and requirements.txt go into the image.
+*
+!app/
+!run.py
+!requirements.txt
+**/__pycache__
+**/*.pyc

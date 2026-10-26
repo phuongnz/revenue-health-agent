@@ -2,6 +2,7 @@
 that are skipped unless LIVE_SMOKE=1 (see conftest.py)."""
 
 import json
+import time
 
 import httpx
 import pytest
@@ -247,6 +248,9 @@ def test_missing_receipt_is_kept_honest():
 def test_reasoning_is_split_from_the_answer():
     assert split_reasoning("<think>check rows</think>\nACCEPT") == ("ACCEPT", "check rows")
     assert split_reasoning("<think>cut off before the end") == ("", "cut off before the end")
+    # live Ultra: the template opens the block, the content only closes it
+    assert split_reasoning('The user asks a sum.</think>{"ok": true}') == ('{"ok": true}', "The user asks a sum.")
+    assert split_reasoning("no tags at all") == ("no tags at all", "")
     client, _, _ = meterless_with(lambda r: httpx.Response(200, json=completion("<think>hmm</think>REJECT")))
     result = client.chat("Evaluator", [{"role": "user", "content": "x"}])
     assert result.text == "REJECT" and result.reasoning == "hmm"
@@ -264,6 +268,42 @@ def test_chat_retries_transient_then_fails_cleanly():
         client.chat("Analyst", [{"role": "user", "content": "x"}])
     assert len(calls) == 3 and len(sleeps) == 2
     assert [e.status for e in tracer.events] == ["retrying", "retrying", "failed"]
+
+
+def test_thinking_is_off_except_on_the_evaluator_lane():
+    bodies = []
+
+    def handler(request):
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json=completion())
+
+    client, _, _ = meterless_with(handler)
+    client.chat("Analyst", [{"role": "user", "content": "x"}])
+    client.chat("Evaluator", [{"role": "user", "content": "x"}])
+    client.chat("Planner", [{"role": "user", "content": "x"}], thinking=True,
+                extra={"chat_template_kwargs": {"other": 1}})
+    client.chat("Analyst", [{"role": "user", "content": "x"}], extra={"chat_template_kwargs": {"other": 1}})
+    assert bodies[0]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "chat_template_kwargs" not in bodies[1], "Ultra reasons before it critiques"
+    assert bodies[2]["chat_template_kwargs"] == {"other": 1}
+    assert bodies[3]["chat_template_kwargs"] == {"enable_thinking": False, "other": 1}
+
+
+def test_a_spent_deadline_stops_the_attempts():
+    calls = []
+
+    def handler(request):
+        calls.append(request.extensions.get("timeout"))
+        return httpx.Response(503, text="busy")
+
+    client, tracer, _ = meterless_with(handler)
+    with pytest.raises(MeterlessError, match="no time left"):
+        client.chat("Analyst", [{"role": "user", "content": "x"}], deadline=time.monotonic() + 1)
+    assert calls == [] and tracer.events[-1].status == "failed"
+    # a per-call timeout is capped by the deadline (and at the contract's 90 s)
+    with pytest.raises(MeterlessError):
+        client.chat("Evaluator", [{"role": "user", "content": "x"}], timeout_s=500, deadline=time.monotonic() + 40)
+    assert len(calls) == 3 and all(t["read"] <= 40 for t in calls)
 
 
 def test_unauthorised_is_not_retried():
