@@ -132,3 +132,12 @@ def test_the_sample_files_are_named_by_their_keys():
     for path in (SAMPLE_DIR / "zetaris").glob("*.json"):
         assert json.loads(path.read_text())["key"] == statement_key(json.loads(path.read_text())["statement"])
     assert prompt_key("Analyst", [{"role": "user", "content": "a"}]) != prompt_key("Evaluator", [{"role": "user", "content": "a"}])
+
+
+def test_the_image_carries_the_sample_and_no_host_address():
+    dockerfile = (ROOT / "Dockerfile").read_text()
+    instructions = [line for line in dockerfile.splitlines() if line and not line.lstrip().startswith("#")]
+    assert not any("host.docker.internal" in line or "METERLESS_BASE_URL" in line or "ZETARIS_REST_URL" in line
+                   for line in instructions), "service addresses come from the environment at docker run"
+    assert "COPY data/sample ./data/sample" in dockerfile
+    assert "!data/sample/" in (ROOT / ".dockerignore").read_text()
