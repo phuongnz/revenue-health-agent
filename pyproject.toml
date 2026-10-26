@@ -5,14 +5,20 @@ description = "Revenue series health checker: a multi-agent data-quality audit o
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-dependencies = []
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.7",
+    "tenacity>=8.2",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = "-ra"
+markers = ["live: talks to the real Zetaris or Nightshift; skipped unless LIVE_SMOKE=1"]
 
 [tool.uv]
 package = false

@@ -12,8 +12,28 @@ the GenAI.Works Resource Center, October 2026).
   the SQL statement splitter, the user-agent placeholder handling and the REST channel.
   Changes: configuration from the environment only, result headers kept, a single
   wait-and-retry on HTTP 429, pacing between statements, no JDBC channel.
+- `app/adapters/zetaris.py` adapts the REST request of `scripts/zetaris_sql.py`
+  (`queryId`, `sql`, `source`, `limit`; bearer key, `X-Org-ID`, a fresh `X-Request-ID`).
+  Changes: httpx instead of urllib, a read-only statement allowlist, typed cells with the
+  headers kept, a 30-60 s timeout, three attempts with back-off and a `Retry-After` wait
+  on HTTP 429, and a trace event per statement.
 - `scripts/zetaris/*.sql` adapts the registration recipes under `open_data/rest_apis/sql/`
   and `open_data/usl/sql/`: a `CACHE TABLE` per raw table was added, a second XBRL
   concept was registered the same way, and the recipes were reordered.
+
+## Meterless `Meterless` (Apache License 2.0)
+
+Source: https://github.com/Meterless/Meterless, `engines/markovian` (specification, docs,
+reference implementation and conformance runner; runner at commit `85c5d41`).
+
+- `app/engines/markovian.py` is written in Python for this project from that engine's
+  specification. Its configuration bounds, marker protocol, carry-over cascade, prompt
+  layout and efficiency formulas (`modelTotals`, `runEfficiency`) follow the TypeScript
+  reference implementation. Changes: Python, per-chunk step input, a run deadline, the
+  receipt's routed model and usage kept per chunk, a trace event per chunk, defaults of
+  8000/12/256/128.
+- `tests/test_markovian_conformance.py` ports the eight checks of
+  `conformance/runner.ts` to pytest under their upstream IDs, with the same parameters.
+  It is a port, not the official suite.
 
 The Apache License 2.0 text is at https://www.apache.org/licenses/LICENSE-2.0.

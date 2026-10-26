@@ -1,0 +1,32 @@
+annotated-types==0.8.0
+    # via pydantic
+anyio==4.15.1
+    # via httpx
+certifi==2026.10.23
+    # via
+    #   httpcore
+    #   httpx
+h11==0.16.0
+    # via httpcore
+httpcore==1.0.9
+    # via httpx
+httpx==0.28.1
+    # via revenue-health-agent
+idna==3.20
+    # via
+    #   anyio
+    #   httpx
+pydantic==2.14.1
+    # via revenue-health-agent
+pydantic-core==2.50.1
+    # via pydantic
+tenacity==9.2.1
+    # via revenue-health-agent
+typing-extensions==4.16.0
+    # via
+    #   anyio
+    #   pydantic
+    #   pydantic-core
+    #   typing-inspection
+typing-inspection==0.4.4
+    # via pydantic
