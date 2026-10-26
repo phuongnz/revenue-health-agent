@@ -213,3 +213,15 @@ def test_a_clean_series_must_be_described_as_clean():
                              company="IBM") is None
     assert check_explanation("It runs 2009-01-01 to 2025-12-31.", [], given="rows covering 2009-01-01..2025-12-31",
                              company="IBM") is None
+
+
+def test_denying_a_found_kind_or_miscounting_it_contradicts_the_findings():
+    """Ford's live explanation said "No other findings of gap, duplicate, or late start appear"
+    and "Four restatements" next to 18 accepted duplicates and 16 restatements."""
+    found = [f.model_copy(update={"status": "accepted"}) for f in analyze_series(APPLE_RFCC_FY2019, NEW)]
+    assert [f.kind for f in found].count("duplicate") == 1
+    assert "denies" in check_explanation("No other findings of gap, duplicate, or late start appear.", found,
+                                         company="Apple")
+    assert "counts 3" in check_explanation("Three duplicated quarters inflate the totals.", found, company="Apple")
+    assert check_explanation("One quarter is duplicated across 10-K and 10-Q; deduplicate it.", found,
+                             company="Apple") is None

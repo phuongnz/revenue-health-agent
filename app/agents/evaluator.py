@@ -187,6 +187,13 @@ def check_support(finding: Finding, evidence: Evidence) -> str | None:
 
 _NEGATION_WORDS = {"no", "not", "never", "without", "nor", "neither", "none", "nothing", "cannot", "rather", "instead",
                    "free"}
+_DENIAL_WORDS = {"no", "not", "never", "none", "nor", "neither", "nothing"}
+_COUNT_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+                "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+                "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20}
+_COUNTED = re.compile(r"\b(\d{1,3}|" + "|".join(_COUNT_WORDS) + r")\s+(?:[\w/'-]+\s+){0,3}?"
+                      r"(restat\w*|duplicat\w*|gaps?\b)", re.I)
+_COUNTED_KIND = {"restat": "restatement", "duplicat": "duplicate", "gap": "gap"}
 _NOT_BRIDGED = re.compile(r"(?:\bnot|n't|\bnever|\bcannot|\bfails? to|\bunable to)\s+(?:\w+\s+){0,2}?"
                           r"(?:bridge|close|fill|resolve)\b", re.I)
 _BROKEN_SERIES = re.compile(r"\bmissing\s+(?:revenue|years|periods|data)\b|\bunaccounted\b|\bbreak in the series\b"
@@ -213,6 +220,24 @@ def _sentences(text: str) -> list[str]:
 def _negated(sentence: str, start: int) -> bool:
     words = re.findall(r"[\w']+", sentence[:start].lower())[-4:]
     return any(w in _NEGATION_WORDS or w.endswith("n't") for w in words)
+
+
+def _denied(sentence: str, start: int) -> bool:
+    words = re.findall(r"[\w']+", sentence[:start].lower())[-6:]
+    return any(w in _DENIAL_WORDS or w.endswith("n't") for w in words)
+
+
+def _denies(pattern: re.Pattern[str], text: str) -> bool:
+    """True when a sentence negates the pattern: "no duplicate", "none of the restatements"."""
+    return any(_denied(sentence, m.start()) for sentence in _sentences(text) for m in pattern.finditer(sentence))
+
+
+def _counts(findings: list[Finding]) -> dict[str, set[int]]:
+    """Per kind, the counts prose may quote: the company's total and each concept's."""
+    per: dict[str, Counter[str]] = {}
+    for f in findings:
+        per.setdefault(f.kind, Counter())[f.concept or ""] += 1
+    return {kind: {sum(c.values()), *c.values()} for kind, c in per.items()}
 
 
 def _asserts(pattern: re.Pattern[str], text: str) -> bool:
@@ -271,12 +296,22 @@ def check_explanation(text: str, findings: list[Finding], given: str = "", compa
         if _asserts(_BROKEN_SERIES, text):
             return (f"it speaks of missing revenue or a broken series, but the code found {who}'s series continuous "
                     f"across the tag change at {handover}")
+    found = ", ".join(k.replace("_", " ") for k in sorted(kinds)) or "nothing wrong"
     for name, (pattern, allowed_by, said) in _KIND_WORDS.items():
         if kinds & allowed_by:
+            if name in ("gap", "restatement", "duplicate") and _denies(pattern, text):
+                return f"it denies {said}, but the code accepted {name} findings for {who}; the accepted findings are: {found}"
             continue
         if _asserts(pattern, text):
-            found = ", ".join(k.replace("_", " ") for k in sorted(kinds)) or "nothing wrong"
             return f"it speaks of {said}, but the code found no {name} for {who}; the accepted findings are: {found}"
+    counts = _counts(findings)
+    for m in _COUNTED.finditer(text):
+        raw, word = m.group(1).lower(), m.group(2).lower()
+        n = int(raw) if raw.isdigit() else _COUNT_WORDS[raw]
+        kind = next(v for k, v in _COUNTED_KIND.items() if word.startswith(k))
+        if kind in counts and n not in counts[kind]:
+            told = " or ".join(str(c) for c in sorted(counts[kind]))
+            return f"it counts {n} {kind} finding(s), but the code accepted {told} for {who}"
     source = f"{given}\n{_finding_text(findings)}"
     for d in _DATE.findall(text):
         if d not in source:
@@ -302,12 +337,18 @@ def _evidence_lines(finding: Finding, limit: int = 4) -> list[str]:
     return lines
 
 
-def critique_prompt(items: list[tuple[str, Finding, str | None]], ctx: SeriesContext) -> str:
+def critique_prompt(items: list[tuple[str, Finding, str | None]], ctx: SeriesContext,
+                    totals: Counter[str] | None = None) -> str:
     lines = [
         f"Company: {ctx.company}. Window: fiscal years from {ctx.from_year}, data expected through "
         f"{ctx.expected_through}. Each finding below was computed by code from the cited rows.",
-        "",
     ]
+    shown = Counter(f.kind for _, f, _ in items)
+    if totals and totals != shown:
+        lines.append("Only a sample is shown. Findings in all, by kind: "
+                     + ", ".join(f"{n} {k}" for k, n in sorted(totals.items())) + "; quote these totals, not the "
+                     "sample's size.")
+    lines.append("")
     for key, f, note in items:
         lines.append(f"{key} [{f.kind}] period {f.period} concept {short_concept(f.concept or '')}")
         lines.append(f"  claim: {f.description}")
@@ -371,7 +412,7 @@ class Evaluator:
                 ranked.append(f)
         ranked = ranked[:MODEL_REVIEW_LIMIT]
         keyed = [(f"F{i + 1}", f, notes.get(f.id)) for i, f in enumerate(ranked)]
-        messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": critique_prompt(keyed, ctx)}]
+        messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": critique_prompt(keyed, ctx, Counter(f.kind for f in findings))}]
         try:
             result = self.chat.chat(self.name, messages, max_tokens=self.max_tokens, temperature=0.1,
                                     purpose=f"critique round {round_no}", target_agent="Analyst",

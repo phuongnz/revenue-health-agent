@@ -25,6 +25,7 @@ from __future__ import annotations
 import re
 import sys
 import time
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import date
@@ -296,7 +297,9 @@ class _Run:
         if not accepted:
             lines.append("Accepted findings: none; the series is clean in the requested window.")
         else:
-            lines.append("Accepted findings (computed by code, checked by the Evaluator):")
+            by_kind = Counter(f.kind for f in accepted)
+            lines.append("Accepted findings (computed by code, checked by the Evaluator), by kind: "
+                         + ", ".join(f"{n} {k}" for k, n in sorted(by_kind.items())) + ". Quote these counts.")
             for f in accepted[:MAX_FINDINGS_IN_STEP]:
                 lines.append(f"- [{f.kind}] {f.period or ''} confidence {f.confidence:.2f}: {f.description}")
             if len(accepted) > MAX_FINDINGS_IN_STEP:

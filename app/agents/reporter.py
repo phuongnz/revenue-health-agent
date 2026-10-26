@@ -94,15 +94,18 @@ def ordered(findings: Iterable[Finding]) -> list[Finding]:
 
 def explained_by_tag_change(findings: Iterable[Finding]) -> dict[str, str]:
     """Finding id -> note, for the old concept's stop and the new concept's late start
-    that a continuous tag change accounts for."""
+    that a tag change accounts for: continuous, or the two ends of a hole that the gap
+    finding reports."""
     findings = list(findings)
     out: dict[str, str] = {}
     for tag in (f for f in findings if f.kind == "tag_change"):
         old, _, new = (tag.concept or "").partition(" -> ")
         old_last, _, new_first = (tag.period or "").partition("/")
         if any(g.kind == "gap" and g.concept == tag.concept and g.company == tag.company for g in findings):
-            continue
-        note = f"Explained by the tag change from {short_concept(old)} to {short_concept(new)} ({old_last} / {new_first})."
+            note = (f"One end of the hole between {short_concept(old)} and {short_concept(new)} ({old_last} / "
+                    f"{new_first}); see the missing periods.")
+        else:
+            note = f"Explained by the tag change from {short_concept(old)} to {short_concept(new)} ({old_last} / {new_first})."
         for f in findings:
             if f.company != tag.company:
                 continue
