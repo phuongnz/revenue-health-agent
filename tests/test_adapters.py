@@ -248,6 +248,9 @@ def test_missing_receipt_is_kept_honest():
 def test_reasoning_is_split_from_the_answer():
     assert split_reasoning("<think>check rows</think>\nACCEPT") == ("ACCEPT", "check rows")
     assert split_reasoning("<think>cut off before the end") == ("", "cut off before the end")
+    # live Ultra: the template opens the block, the content only closes it
+    assert split_reasoning('The user asks a sum.</think>{"ok": true}') == ('{"ok": true}', "The user asks a sum.")
+    assert split_reasoning("no tags at all") == ("no tags at all", "")
     client, _, _ = meterless_with(lambda r: httpx.Response(200, json=completion("<think>hmm</think>REJECT")))
     result = client.chat("Evaluator", [{"role": "user", "content": "x"}])
     assert result.text == "REJECT" and result.reasoning == "hmm"

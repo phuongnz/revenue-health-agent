@@ -17,8 +17,9 @@
   back empty (HTTP 502 `empty_response`). So a call thinks only on the Evaluator's lane
   (Ultra critiques the findings); every other call sends
   `chat_template_kwargs: {enable_thinking: false}`. `thinking=` overrides per call.
-- **Reasoning split off.** Nemotron Ultra may put its reasoning in the content inside
-  `<think>…</think>`; `text` is the answer without it, `reasoning` keeps it.
+- **Reasoning split off.** Nemotron Ultra puts its reasoning in the content, closed by
+  `</think>` (the chat template opens the block, so the content usually starts
+  mid-reasoning); `text` is the answer without it, `reasoning` keeps it.
 
 `as_generator` adapts the client to the Markovian engine's injected generator,
 `generate(prompt, attachments, system_prompt, on_stream, abort) -> {"text", "metadata"}`.
@@ -70,8 +71,14 @@ def compact_receipt(receipt: dict[str, Any] | None) -> dict[str, Any] | None:
 
 
 def split_reasoning(content: str) -> tuple[str, str]:
-    """Return (answer, reasoning): `<think>` blocks removed from the answer."""
-    reasoning = "\n".join(m.group(1).strip() for m in _THINK.finditer(content))
+    """Return (answer, reasoning): `<think>` blocks removed from the answer. The chat
+    template opens the block itself, so the content often starts mid-reasoning and only
+    closes it: everything before a leading `</think>` is reasoning too."""
+    head = ""
+    close, open_ = content.find("</think>"), content.find("<think>")
+    if close != -1 and (open_ == -1 or close < open_):
+        head, content = content[:close].strip(), content[close + len("</think>"):]
+    reasoning = "\n".join([head] * bool(head) + [m.group(1).strip() for m in _THINK.finditer(content)])
     answer = _THINK.sub("", content).strip()
     return answer, reasoning
 
