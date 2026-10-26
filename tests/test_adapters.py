@@ -14,7 +14,8 @@ from app.adapters.zetaris import (
     check_statement,
     coerce_cell,
 )
-from app.config import Settings
+from app.adapters.meterless import MeterlessClient, MeterlessError, split_reasoning
+from app.config import LIGHTNING_LANE, ULTRA_LANE, Settings
 from app.tracing import NullTracer
 
 FAKE_KEY = "test-key-not-real"
@@ -175,6 +176,120 @@ def test_missing_key_is_refused():
         ZetarisClient(Settings.from_env({}))
 
 
+# --- Nightshift ----------------------------------------------------------------
+
+
+def completion(content="OK", routed=LIGHTNING_LANE, receipt=True):
+    body = {"id": "c1", "object": "chat.completion", "model": routed,
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 12, "completion_tokens": 3, "total_tokens": 15}}
+    if receipt:
+        body["meterless"] = {"schema": "meterless.compute_receipt.v1", "receipt_id": "rcpt_1",
+                             "requested_model": routed, "routed_model": routed,
+                             "winning_route": {"provider": "nvidia"}, "phases": [{"ms": 420}],
+                             "receipt_envelope": {"sig_b64": "x" * 40}, "receipt": {"nested": True}}
+    return body
+
+
+def meterless_with(handler, **kwargs):
+    sleeps = []
+    tracer = NullTracer()
+    client = MeterlessClient(settings(), tracer=tracer, transport=httpx.MockTransport(handler),
+                             sleep=sleeps.append, **kwargs)
+    return client, tracer, sleeps
+
+
+@pytest.mark.parametrize("agent,lane", [("Analyst", LIGHTNING_LANE), ("Planner", LIGHTNING_LANE), ("Evaluator", ULTRA_LANE)])
+def test_chat_pins_lane_per_agent_and_keeps_receipt(agent, lane):
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json=completion(routed=lane))
+
+    client, tracer, _ = meterless_with(handler)
+    result = client.chat(agent, [{"role": "user", "content": "Say OK"}], target_agent="Reporter")
+    request = seen[0]
+    assert request.url.path == "/v1/chat/completions"
+    assert request.headers["meterless-app"] == "revenue-health-agent" and request.headers["meterless-scope"] == "user"
+    assert request.headers["Authorization"] == f"Bearer {FAKE_KEY}"
+    assert json.loads(request.content)["model"] == lane
+    assert result.text == "OK" and result.routed_model == lane and result.on_nemotron
+    (event,) = tracer.events
+    assert event.action == "model_call" and event.status == "success" and event.agent_name == agent
+    assert event.model == lane and event.receipt["routed_model"] == lane and event.target_agent == "Reporter"
+    assert event.receipt["receipt_id"] == "rcpt_1" and "receipt_envelope" not in event.receipt
+    assert "receipt_envelope" in result.receipt  # the whole receipt stays on the result
+    assert FAKE_KEY not in event.to_json_line()
+
+
+def test_routing_mode_in_env_never_reaches_the_request():
+    seen = []
+    client = MeterlessClient(settings(METERLESS_MODEL="meterless/auto"), tracer=NullTracer(),
+                             transport=httpx.MockTransport(lambda r: seen.append(r) or httpx.Response(200, json=completion())))
+    client.chat("Analyst", [{"role": "user", "content": "x"}])
+    assert json.loads(seen[0].content)["model"] == LIGHTNING_LANE
+
+
+def test_reply_routed_off_nemotron_needs_validation():
+    client, tracer, _ = meterless_with(lambda r: httpx.Response(200, json=completion(routed="local-runtime/phi-4-mini-instruct")))
+    result = client.chat("Analyst", [{"role": "user", "content": "x"}])
+    assert not result.on_nemotron and tracer.events[-1].status == "needs_validation"
+
+
+def test_missing_receipt_is_kept_honest():
+    client, tracer, _ = meterless_with(lambda r: httpx.Response(200, json=completion(receipt=False)))
+    result = client.chat("Analyst", [{"role": "user", "content": "x"}])
+    assert result.receipt is None and result.routed_model is None
+    assert tracer.events[-1].status == "needs_validation" and tracer.events[-1].model == LIGHTNING_LANE
+
+
+def test_reasoning_is_split_from_the_answer():
+    assert split_reasoning("<think>check rows</think>\nACCEPT") == ("ACCEPT", "check rows")
+    assert split_reasoning("<think>cut off before the end") == ("", "cut off before the end")
+    client, _, _ = meterless_with(lambda r: httpx.Response(200, json=completion("<think>hmm</think>REJECT")))
+    result = client.chat("Evaluator", [{"role": "user", "content": "x"}])
+    assert result.text == "REJECT" and result.reasoning == "hmm"
+
+
+def test_chat_retries_transient_then_fails_cleanly():
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(503, text="upstream busy")
+
+    client, tracer, sleeps = meterless_with(handler)
+    with pytest.raises(MeterlessError, match="HTTP 503"):
+        client.chat("Analyst", [{"role": "user", "content": "x"}])
+    assert len(calls) == 3 and len(sleeps) == 2
+    assert [e.status for e in tracer.events] == ["retrying", "retrying", "failed"]
+
+
+def test_unauthorised_is_not_retried():
+    calls = []
+    client, _, _ = meterless_with(lambda r: calls.append(1) or httpx.Response(401, json={"error": "runtime_token_missing"}))
+    with pytest.raises(MeterlessError, match="HTTP 401"):
+        client.chat("Analyst", [{"role": "user", "content": "x"}])
+    assert len(calls) == 1
+
+
+def test_generator_matches_engine_contract():
+    seen = []
+    client, _, _ = meterless_with(lambda r: seen.append(json.loads(r.content)) or httpx.Response(200, json=completion("chunk")))
+    streamed = []
+    out = client.as_generator("Analyst")("Do step 1", ["rows: 3"], "You are the Analyst", streamed.append, None)
+    assert out["text"] == "chunk" and streamed == ["chunk"]
+    assert out["metadata"]["routed_model"] == LIGHTNING_LANE and out["metadata"]["usage"]["total_tokens"] == 15
+    assert seen[0]["messages"][0] == {"role": "system", "content": "You are the Analyst"}
+    assert seen[0]["messages"][1]["content"] == "Do step 1\n\nrows: 3"
+
+
+def test_missing_token_is_refused():
+    with pytest.raises(MeterlessError, match="METERLESS_RUNTIME_TOKEN"):
+        MeterlessClient(Settings.from_env({}))
+
+
 # --- live smoke tests -----------------------------------------------------------
 
 
@@ -191,3 +306,19 @@ def test_live_zetaris_smoke(live_settings, live_tracer):
     first = result.records[0]
     assert first["cik"] == "320193" and isinstance(first["fiscal_year"], int) and isinstance(first["value_usd"], int)
     assert live_tracer.events[-1].action == "query_zetaris" and live_tracer.events[-1].status == "success"
+
+
+@pytest.mark.live
+def test_live_nightshift_smoke(live_settings, live_tracer):
+    with MeterlessClient(live_settings, tracer=live_tracer) as client:
+        result = client.chat(
+            "Analyst",
+            [{"role": "user", "content": "Reply with the single word OK."}],
+            max_tokens=256,
+            purpose="live smoke test",
+        )
+    print("\nrouted_model:", result.routed_model, "| receipt keys:", sorted(result.receipt or {}))
+    assert result.routed_model and result.routed_model.startswith("nvidia/nemotron")
+    assert result.text
+    event = live_tracer.events[-1]
+    assert event.action == "model_call" and event.model.startswith("nvidia/nemotron") and event.receipt
