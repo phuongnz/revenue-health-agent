@@ -194,6 +194,9 @@ _COUNT_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, 
 _COUNTED = re.compile(r"\b(\d{1,3}|" + "|".join(_COUNT_WORDS) + r")\s+(?:[\w/'-]+\s+){0,3}?"
                       r"(restat\w*|duplicat\w*|gaps?\b)", re.I)
 _COUNTED_KIND = {"restat": "restatement", "duplicat": "duplicate", "gap": "gap"}
+_WINDOW_LENGTH = re.compile(r"\b(\d{1,2}|" + "|".join(_COUNT_WORDS) + r")[- ]years?[- ](?:long )?"
+                            r"(?:window|range|span|horizon)\b", re.I)
+_REQUESTED_YEARS = re.compile(r"\bfiscal years (?:from )?(\d{4}) to (\d{4})\b", re.I)
 _NOT_BRIDGED = re.compile(r"(?:\bnot|n't|\bnever|\bcannot|\bfails? to|\bunable to)\s+(?:\w+\s+){0,2}?"
                           r"(?:bridge|close|fill|resolve)\b", re.I)
 _BROKEN_SERIES = re.compile(r"\bmissing\s+(?:revenue|years|periods|data)\b|\bunaccounted\b|\bbreak in the series\b"
@@ -312,6 +315,15 @@ def check_explanation(text: str, findings: list[Finding], given: str = "", compa
         if kind in counts and n not in counts[kind]:
             told = " or ".join(str(c) for c in sorted(counts[kind]))
             return f"it counts {n} {kind} finding(s), but the code accepted {told} for {who}"
+    window = _REQUESTED_YEARS.search(given)
+    if window:
+        first, last = int(window.group(1)), int(window.group(2))
+        length = last - first + 1
+        for m in _WINDOW_LENGTH.finditer(text):
+            raw = m.group(1).lower()
+            n = int(raw) if raw.isdigit() else _COUNT_WORDS[raw]
+            if n not in (length, length - 1):
+                return f"it calls the window {n} years long, but the request covers fiscal years {first} to {last} ({length} years)"
     source = f"{given}\n{_finding_text(findings)}"
     for d in _DATE.findall(text):
         if d not in source:

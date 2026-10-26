@@ -88,6 +88,14 @@ def main(argv: list[str] | None = None) -> int:
     manifest = {"as_of": as_of.isoformat(), "captured_at": utc_now(), "notice": NOTICE,
                 "runs": [runs[k] for k in sorted(runs)]}
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # the subset is what the recorded runs read: drop answers a recaptured run no longer asks for
+    kept = {kind: {k for r in manifest["runs"] for k in r[field]}
+            for kind, field in (("zetaris", "statements"), ("completions", "completions"))}
+    for kind, keys in kept.items():
+        for path in (SAMPLE_DIR / kind).glob("*.json"):
+            if path.stem not in keys:
+                path.unlink()
+                print(f"dropped {kind}/{path.name}: no recorded run reads it", file=sys.stderr)
     return 0
 
 

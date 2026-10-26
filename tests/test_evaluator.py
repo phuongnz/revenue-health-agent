@@ -225,3 +225,12 @@ def test_denying_a_found_kind_or_miscounting_it_contradicts_the_findings():
     assert "counts 3" in check_explanation("Three duplicated quarters inflate the totals.", found, company="Apple")
     assert check_explanation("One quarter is duplicated across 10-K and 10-Q; deduplicate it.", found,
                              company="Apple") is None
+
+
+def test_the_window_length_must_match_the_requested_years():
+    """Oracle's live explanation called fiscal 2010 to 2015 "the eight-year window"."""
+    given = "Audit the reliability of the revenue series of Oracle (fiscal years 2010 to 2015)"
+    said = "The eight-year window is fully covered by accepted filings."
+    assert "request covers fiscal years 2010 to 2015 (6 years)" in check_explanation(said, [], given=given, company="Oracle")
+    assert check_explanation("The six-year window is clean.", [], given=given, company="Oracle") is None
+    assert check_explanation(said, [], given="fiscal years from 2009 to latest", company="Oracle") is None

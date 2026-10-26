@@ -1,6 +1,6 @@
 {
   "as_of": "2026-10-26",
-  "captured_at": "2026-10-26T13:05:34.912Z",
+  "captured_at": "2026-10-26T13:14:59.062Z",
   "notice": "A small extract of SEC EDGAR XBRL company facts (public domain; SEC asks that it not be bulk-redistributed) and of the EDGAR submissions header, as read through Zetaris, plus the Nemotron completions of the same runs. Only what the three example requests read is kept.",
   "runs": [
     {
@@ -37,7 +37,7 @@
       ],
       "completions": [
         "3104d6e68a5e2970",
-        "8a4e6345ac90d12e"
+        "926e1cfdde0db603"
       ]
     },
     {

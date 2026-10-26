@@ -6,13 +6,13 @@
  "captured_in": [
   "example_2"
  ],
- "text": "Oracle's revenue series from fiscal years 2010 to 2015 shows no accepted findings, meaning the data passes the primary checks without gaps, restatements, or duplication. The eight-year window is fully covered by accepted filings, so the reported figures can be used for modeling without adjusting for data-quality breaks. [STATE_CHECKPOINT] COMPLETED: Oracle us-gaap/Revenues (primary) clean for 2010–2015. REMAINING: No further steps needed for this concept. DECISIONS: Reliable for modeling. CONTEXT: No carry-over issues; series is complete within the window. [TASK_COMPLETE]",
+ "text": "Oracle's revenue series from fiscal years 2010 to 2015 shows no accepted findings, meaning the reported figures are consistent and complete across the window. The data spans the full period without gaps or restatements, supporting its reliability for modeling. [STATE_CHECKPOINT] COMPLETED: Oracle us-gaap/Revenues (primary) has no findings; the series is clean from 2010 to 2015. REMAINING: No further steps needed for this concept. DECISIONS: Reliability confirmed for the requested window. CONTEXT: This is the first and only step for Oracle's primary revenue concept. [TASK_COMPLETE]",
  "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
  "routed_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
  "receipt": {
   "schema": "meterless.compute_receipt.v1",
-  "receipt_id": "rcpt_req_ok412ft4",
-  "decision_id": "req_ok412ft4",
+  "receipt_id": "rcpt_req_srj58u89",
+  "decision_id": "req_srj58u89",
   "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
   "provider_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
   "routed_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
@@ -28,10 +28,10 @@
    {
     "phase": "final_synthesis",
     "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
-    "ms": 4490,
+    "ms": 2148,
     "tokensIn": 475,
-    "tokensOut": 146,
-    "outputTps": 32.516703786191535,
+    "tokensOut": 145,
+    "outputTps": 67.5046554934823,
     "coherence": null,
     "tier": "A",
     "reflex_decided_in_ms": 0.2
@@ -39,10 +39,10 @@
   ],
   "usage": {
    "input_tokens": 475,
-   "output_tokens": 146,
-   "total_tokens": 621,
-   "output_tps": 32.516703786191535,
-   "latency_ms": 4490
+   "output_tokens": 145,
+   "total_tokens": 620,
+   "output_tps": 67.5046554934823,
+   "latency_ms": 2148
   },
   "cost": {
    "actual_usd": 0,
@@ -74,7 +74,7 @@
  "finish_reason": "stop",
  "usage": {
   "prompt_tokens": 475,
-  "completion_tokens": 146,
-  "total_tokens": 621
+  "completion_tokens": 145,
+  "total_tokens": 620
  }
 }
