@@ -1,9 +1,14 @@
 # revenue-health-agent
 
-<!-- Four sections, nothing that changes when a phase closes: no results, no dates, no
-     phase numbers. -->
+**Track:** Solving Fragmented Intelligence · **Sponsor technology:** Zetaris (data
+layer), Meterless Markovian engine, Meterless Nightshift with NVIDIA Nemotron ·
+**Run:** `./test.sh`
 
-What this is, in two or three sentences, and who it is for.
+An agent that helps an equity analyst with unreliable revenue time series. It pulls
+each company's XBRL revenue facts, filing metadata and industry profile from SEC EDGAR
+through Zetaris, detects gaps, tag changes and restatements, and produces a sourced
+data-quality report that says which periods can be trusted and why. Built for the
+GenAI.Works Open Agent Hackathon 2026.
 
 ## Run
 
@@ -13,14 +18,12 @@ How to run it, and how to test it:
 
 ## Layout
 
-<!-- One line per top-level entry. In a public repository, only what is committed. -->
-
-- `src/` — …
-- `tests/` — …
-- `docs/` — the design, the decisions, the record of each phase
+- `scripts/` — registration of the data sources in Zetaris, run once by hand
+- `tests/` — the test suite; nothing in it touches the network
+- `docs/` — the design
 
 ## Read more
 
 - `docs/design.md` — the design
-- `docs/decisions.md` — the decisions, dated
+- `THIRD_PARTY_NOTICES.md` — adapted code and its licences
 - `LICENSE` — MIT

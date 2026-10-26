@@ -13,3 +13,12 @@
 .claude/skills/
 .agents/
 skills-lock.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets never enter this repository; .env is local only
+.env
