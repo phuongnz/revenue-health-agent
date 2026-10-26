@@ -11,17 +11,23 @@ live is stored as its failure and fails the same way on replay.
 
 `RecordingZetaris` and `RecordingChat` wrap the live clients and write what passes
 through them (`scripts/capture_sample.py`); nothing at runtime writes here.
+`SampleZetaris` and `SampleChat` stand in for the live clients in sample mode: same
+methods, same trace events (marked `"source": "sample"`), no network. A miss is raised
+to the caller, whose usual fallback runs, and kept in `misses`; `run_request` turns any
+miss into a failed response naming the keys, so a stale sample never passes quietly.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import date
 from pathlib import Path
 from typing import Any
 
-from app.adapters.meterless import compact_receipt
+from app.adapters.meterless import ChatResult, MeterlessError, compact_receipt
+from app.adapters.zetaris import QueryResult, StatementRefused, ZetarisError, check_statement
 
 SAMPLE_DIR = Path(__file__).resolve().parents[2] / "data" / "sample"
 KEY_CHARS = 16
@@ -29,6 +35,11 @@ KEY_CHARS = 16
 
 class SampleError(Exception):
     """The sample holds no answer for this statement or prompt."""
+
+
+class SampleMiss(ZetarisError, MeterlessError, SampleError):
+    """Raised by a replay client: no stored answer. A ZetarisError and a MeterlessError
+    too, so the agents take the fallback they take for a failed call."""
 
 
 def statement_key(statement: str) -> str:
@@ -163,3 +174,96 @@ class RecordingChat:
 
     def close(self) -> None:
         self.inner.close()
+
+
+# --- replay (sample mode) -----------------------------------------------------------------------
+
+
+class SampleZetaris:
+    """The Zetaris client in sample mode: each statement's stored answer, by its hash."""
+
+    agent_name = "Retriever"
+
+    def __init__(self, store: SampleStore, tracer: Any) -> None:
+        self.store, self.tracer = store, tracer
+        self.misses: list[str] = []
+
+    def query(self, sql: str, limit: int = 5000, purpose: str = "") -> QueryResult:
+        try:
+            statement = check_statement(sql)
+        except StatementRefused as e:
+            self.tracer.emit(self.agent_name, "refuse_statement", input_summary=_short(sql, 300),
+                             output_summary=f"refused: {e}", status="needs_revision",
+                             details={"statement": sql, "reason": str(e), "source": "sample"})
+            raise
+        record = self.store.result(statement) or self.store.result(sql)
+        key = statement_key(statement)
+        if record is None:
+            table = re.search(r"\bFROM\s+([\w.]+)", statement, re.IGNORECASE)
+            miss = f"statement {key} ({'reads ' + table.group(1) if table else _short(statement, 120)})"
+            self.misses.append(miss)
+            self.tracer.emit(self.agent_name, "query_zetaris", input_summary=_short(statement, 300),
+                             output_summary=f"failed: not in the sample: {miss}", status="failed",
+                             details={"statement": statement, "sample_key": key, "source": "sample"})
+            raise SampleMiss(f"not in the sample: {miss}")
+        if "error" in record:
+            self.tracer.emit(self.agent_name, "query_zetaris", input_summary=_short(statement, 300),
+                             output_summary=f"failed: {record['error']} (as captured)", status="failed",
+                             details={"statement": statement, "error": record["error"], "sample_key": key,
+                                      "source": "sample"})
+            raise ZetarisError(record["error"].split(": ", 1)[-1])
+        result = QueryResult(statement, list(record["headers"]), [list(r) for r in record["rows"]], record.get("total"))
+        self.tracer.emit(
+            self.agent_name, "query_zetaris", input_summary=_short(statement, 300),
+            output_summary=f"{len(result)} rows; columns {', '.join(result.headers[:12])}"
+            + (f"; {purpose}" if purpose else "") + "; from the sample",
+            status="success",
+            details={"statement": statement, "row_count": len(result), "headers": result.headers,
+                     "sample_key": key, "source": "sample"},
+        )
+        return result
+
+    def close(self) -> None:
+        pass
+
+
+class SampleChat:
+    """The model client in sample mode: each prompt's stored completion, by its hash."""
+
+    def __init__(self, store: SampleStore, tracer: Any) -> None:
+        self.store, self.tracer = store, tracer
+        self.misses: list[str] = []
+
+    def chat(self, agent_name: str, messages: list[dict[str, Any]], *, purpose: str = "",
+             target_agent: str | None = None, **_: Any) -> ChatResult:
+        key = prompt_key(agent_name, messages)
+        record = self.store.completion(agent_name, messages)
+        last = next((m for m in reversed(messages) if m.get("role") == "user"), messages[-1] if messages else {})
+        prompt = _short(last.get("content", ""), 300)
+        details: dict[str, Any] = {"sample_key": key, "source": "sample", **({"purpose": purpose} if purpose else {})}
+        if record is None:
+            miss = f"prompt {key} ({agent_name}{', ' + purpose if purpose else ''})"
+            self.misses.append(miss)
+            self.tracer.emit(agent_name, "model_call", input_summary=prompt,
+                             output_summary=f"failed: not in the sample: {miss}", target_agent=target_agent,
+                             status="failed", details=details)
+            raise SampleMiss(f"not in the sample: {miss}")
+        if "error" in record:
+            self.tracer.emit(agent_name, "model_call", input_summary=prompt,
+                             output_summary=f"failed: {record['error']} (as captured)", target_agent=target_agent,
+                             status="failed", details={**details, "error": record["error"]})
+            raise MeterlessError(record["error"].split(": ", 1)[-1])
+        result = ChatResult(text=record["text"], requested_model=record["requested_model"],
+                            routed_model=record.get("routed_model"), receipt=record.get("receipt"),
+                            finish_reason=record.get("finish_reason"), usage=record.get("usage") or {})
+        self.tracer.emit(
+            agent_name, "model_call", input_summary=prompt, output_summary=_short(result.text, 300),
+            target_agent=target_agent, status="success" if result.on_nemotron else "needs_validation",
+            model=result.routed_model, receipt=result.receipt,
+            details={**details, "requested_model": result.requested_model, "finish_reason": result.finish_reason,
+                     "usage": result.usage},
+        )
+        return result
+
+    def close(self) -> None:
+        pass

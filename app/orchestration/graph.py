@@ -37,6 +37,7 @@ from app.agents.planner import CONCEPTS, PlanError, Planner, PlanStep
 from app.agents.reporter import Explanation, ReportInput, Reporter, vetted_critiques
 from app.agents.retriever import DQ_COMPANY_TABLE, RetrievalError, Retriever
 from app.adapters.meterless import MeterlessClient, MeterlessError
+from app.adapters.sample_data import SampleChat, SampleError, SampleStore, SampleZetaris
 from app.adapters.zetaris import ZetarisClient, ZetarisError
 from app.config import Settings
 from app.engines.markovian import REFLECTION_SYSTEM, Markovian, clean_markers
@@ -97,7 +98,7 @@ def _cik(value: Any) -> str:
 class Orchestrator:
     def __init__(
         self, settings: Settings, tracer: Tracer, zetaris: Any, chat: Any = None, *,
-        as_of: date | None = None, clock: Callable[[], float] = time.monotonic,
+        as_of: date | None = None, clock: Callable[[], float] = time.monotonic, source_kind: str = "zetaris",
     ) -> None:
         self.settings = settings
         self.tracer = tracer
@@ -105,6 +106,7 @@ class Orchestrator:
         self.chat = chat
         self.as_of = as_of or date.today()
         self.clock = clock
+        self.source_kind = source_kind  # "sample" when the rows are replayed from data/sample/
 
     def run(self, request: RunRequest) -> RunResponse:
         return _Run(self, request).execute()
@@ -406,6 +408,13 @@ class _Run:
         state = self.state
         state.use("Reporter")
         plan = state.plan
+        findings = state.findings
+        if self.o.source_kind != "zetaris":
+            findings = [f.model_copy(update={"sources": [s.model_copy(update={"kind": self.o.source_kind})
+                                                         for s in f.sources]}) for f in findings]
+            state.limitations.append(f"Sample mode: the rows and the model's answers are replayed from data/sample/, "
+                                     f"captured from live runs on {self.o.as_of.isoformat()}; they do not move as "
+                                     f"companies file.")
         companies = [c.name for c in plan.companies] if plan else []
         info = ReportInput(
             run_id=self.request.run_id, companies=companies, explanations=state.explanations,
@@ -418,7 +427,7 @@ class _Run:
         )
         result = None
         if error is None:
-            result, _, paths = self.reporter.report(state.findings, info, self.o.settings.log_dir)
+            result, _, paths = self.reporter.report(findings, info, self.o.settings.log_dir)
             if state.steps_with_rows == 0:
                 error = RunError(type="source_unavailable", recoverable=True,
                                  message="No revenue table could be read from Zetaris; see limitations.")
@@ -465,8 +474,7 @@ def run_request(request: RunRequest, settings: Settings | None = None, stream: A
                            error=RunError(type=kind, message=message, recoverable=recoverable))
 
     if settings.sample_mode or request.options.sample_mode:
-        return fail("not_available", "Sample mode is not built yet; run live with the Zetaris and Nightshift "
-                                     "settings in the environment.", False)
+        return _run_sample(request, settings, tracer, as_of, fail)
     try:
         zetaris = ZetarisClient(settings, tracer)
     except ZetarisError as e:
@@ -483,3 +491,31 @@ def run_request(request: RunRequest, settings: Settings | None = None, stream: A
         zetaris.close()
         if chat is not None:
             chat.close()
+
+
+def _run_sample(request: RunRequest, settings: Settings, tracer: Tracer, as_of: date | None,
+                fail: Callable[[str, str, bool], RunResponse]) -> RunResponse:
+    """Sample mode: the same agents on the stored answers of the captured runs, with the
+    capture date as "today" so the prompts match. Anything the sample does not hold fails
+    the request, naming the keys, rather than passing with fallbacks."""
+    try:
+        store = SampleStore()
+        as_of = as_of or store.as_of
+    except (SampleError, OSError, ValueError, KeyError) as e:
+        return fail("configuration", f"Sample mode has no usable sample data: {e}", False)
+    zetaris, chat = SampleZetaris(store, tracer), SampleChat(store, tracer)
+    try:
+        response = Orchestrator(settings, tracer, zetaris, chat, as_of=as_of, source_kind="sample").run(request)
+    except Exception as e:  # noqa: BLE001 - the contract wants an error shape, not a stack trace
+        return fail("internal_error", f"{type(e).__name__}: {e}", True)
+    misses = zetaris.misses + chat.misses
+    if not misses:
+        return response
+    shown = "; ".join(misses[:3]) + (f"; and {len(misses) - 3} more" if len(misses) > 3 else "")
+    message = (f"Sample mode replays only the captured example runs (input_examples/), and this request needs "
+               f"answers the sample does not hold: {shown}. Run it live, or recapture the sample after a prompt or "
+               f"statement change (scripts/capture_sample.py).")
+    tracer.emit(AGENT, "sample_miss", input_summary=request.input.query, output_summary=f"failed: {message}",
+                status="failed", details={"misses": misses})
+    return response.model_copy(update={"status": "failed", "result": None,
+                                       "error": RunError(type="sample_miss", message=message, recoverable=False)})

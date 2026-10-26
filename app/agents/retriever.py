@@ -5,8 +5,8 @@ but `SELECT, WITH, SHOW, DESCRIBE` and the DQ reads, and which traces every stat
 with its row count), and hands typed rows to the Analyst. Table names come from the
 Planner's registry and window bounds are formatted by code, never pasted from a request.
 
-Sample mode swaps the client for one that answers from cached results; this module does
-not change.
+Sample mode swaps the client for `SampleZetaris`, which answers from the stored results
+in data/sample/; this module does not change.
 """
 
 from __future__ import annotations

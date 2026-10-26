@@ -1,8 +1,8 @@
 """Pydantic schemas: the run request and response of the submission contract, a finding
 with its sources, and the trace event in the judges' format.
 
-The request and response shapes follow §4 of the build contract. The agents that fill
-them arrive in a later phase; these models are the contract they are held to.
+The request and response shapes follow §4 of the build contract; these models are the
+contract the agents are held to.
 """
 
 from __future__ import annotations

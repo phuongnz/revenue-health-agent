@@ -157,8 +157,9 @@ def test_run_request_without_credentials_returns_the_error_shape(tmp_path):
     settings = Settings.from_env({"LOG_DIR": str(tmp_path)})
     response = run_request(RunRequest(run_id="t2", input={"query": "Apple"}), settings, stream=None)
     assert response.status == "failed" and response.error.type == "configuration"
+    # sample mode needs no credentials; a request other than the captured examples is not in the sample
     sample = Settings.from_env({"LOG_DIR": str(tmp_path), "SAMPLE_MODE": "true"})
-    assert run_request(RunRequest(run_id="t3", input={"query": "Apple"}), sample, stream=None).error.type == "not_available"
+    assert run_request(RunRequest(run_id="t3", input={"query": "Apple"}), sample, stream=None).error.type == "sample_miss"
 
 
 CONTRADICTING = ("The RevenueFromContractWithCustomerExcludingAssessedTax series cannot represent the full request, "
