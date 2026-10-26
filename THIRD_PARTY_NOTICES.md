@@ -21,4 +21,19 @@ the GenAI.Works Resource Center, October 2026).
   and `open_data/usl/sql/`: a `CACHE TABLE` per raw table was added, a second XBRL
   concept was registered the same way, and the recipes were reordered.
 
+## Meterless `Meterless` (Apache License 2.0)
+
+Source: https://github.com/Meterless/Meterless, `engines/markovian` (specification, docs,
+reference implementation and conformance runner; runner at commit `85c5d41`).
+
+- `app/engines/markovian.py` is written in Python for this project from that engine's
+  specification. Its configuration bounds, marker protocol, carry-over cascade, prompt
+  layout and efficiency formulas (`modelTotals`, `runEfficiency`) follow the TypeScript
+  reference implementation. Changes: Python, per-chunk step input, a run deadline, the
+  receipt's routed model and usage kept per chunk, a trace event per chunk, defaults of
+  8000/12/256/128.
+- `tests/test_markovian_conformance.py` ports the eight checks of
+  `conformance/runner.ts` to pytest under their upstream IDs, with the same parameters.
+  It is a port, not the official suite.
+
 The Apache License 2.0 text is at https://www.apache.org/licenses/LICENSE-2.0.
