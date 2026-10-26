@@ -1,0 +1,18 @@
+[project]
+name = "revenue-health-agent"
+version = "0.1.0"
+description = "Revenue series health checker: a multi-agent data-quality audit of SEC EDGAR revenue facts through Zetaris, Meterless Nightshift and NVIDIA Nemotron"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.uv]
+package = false
