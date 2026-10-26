@@ -90,7 +90,7 @@ class Source(BaseModel):
     row_ids: list[str] = Field(default_factory=list)
 
 
-FindingKind = Literal["gap", "duplicate", "restatement", "early_stop", "late_start", "other"]
+FindingKind = Literal["gap", "duplicate", "restatement", "early_stop", "late_start", "tag_change", "other"]
 
 
 class Finding(BaseModel):
@@ -105,6 +105,9 @@ class Finding(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     status: Literal["proposed", "accepted", "rejected", "unsupported"] = "proposed"
     sources: list[Source] = Field(default_factory=list)
+    recommendation: str | None = None
+    evaluator_reason: str | None = Field(default=None, description="why the Evaluator decided as it did")
+    revision_count: int = Field(default=0, ge=0, description="times the Evaluator sent it back to the Analyst")
 
 
 class RunResult(BaseModel):
