@@ -475,6 +475,34 @@ def compare_concepts(
     ]
 
 
+def find_reference_mismatch(
+    company: str, cik: str | None, dq_records: Iterable[Mapping[str, Any]], dq_table: str, dq_statement: str | None,
+) -> list[Finding]:
+    """A company whose SIC code fails the semantic layer's foreign-key rule to the SIC
+    reference (the Zetaris data-quality run reports the failing rows)."""
+    want = (cik or "").lstrip("0")
+    out = []
+    for record in dq_records:
+        if not want or str(record.get("cik") or "").lstrip("0") != want:
+            continue
+        sic = str(record.get("sic") or record.get("sic_code") or "?")
+        rid = f"cik:{record.get('cik')}"
+        out.append(Finding(
+            id=finding_id(company, "SIC reference", "other", sic),
+            company=company, cik=cik, concept="SIC reference", period=None, kind="other",
+            description=(f"SEC files {company} under SIC {sic} ({record.get('sic_description_edgar') or 'no description'}), "
+                         f"a code absent from the 1,005-code SIC reference: Zetaris's foreign-key rule from "
+                         f"sic_edgar_usl.company.sic to sic_code fails for this company, so an industry join drops it "
+                         f"or leaves its industry columns empty."),
+            evidence=[{**dict(record), "row_id": rid, "table": dq_table}],
+            confidence=0.9,
+            sources=[Source(table=dq_table, statement=dq_statement, row_ids=[rid])],
+            recommendation=(f"Map SIC {sic} to its industry group ({sic[:3]}) by hand before comparing {company} with "
+                            f"its industry peers."),
+        ))
+    return out
+
+
 # --- the agent ------------------------------------------------------------------------------
 
 
@@ -527,7 +555,9 @@ class Analyst:
     ) -> Finding | None:
         """Re-derive a finding from the rows after the Evaluator sent it back. Returns the
         recomputed finding (same id, fresh evidence) or None when the rows do not yield it."""
-        if " -> " in (finding.concept or ""):
+        if finding.kind == "other":  # reference data: the evidence is the data-quality record itself
+            fresh = [finding] if finding.evidence else []
+        elif " -> " in (finding.concept or ""):
             fresh = compare_concepts(rows, ctx, alternate_rows or [], alternate) if alternate else []
         else:
             fresh = analyze_series(rows, ctx)

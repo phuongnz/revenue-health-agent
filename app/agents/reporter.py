@@ -71,22 +71,45 @@ def ordered(findings: Iterable[Finding]) -> list[Finding]:
     return sorted(findings, key=lambda f: (f.company, ORDER.get(f.kind, 9), f.concept or "", f.period or ""))
 
 
+def explained_by_tag_change(findings: Iterable[Finding]) -> dict[str, str]:
+    """Finding id -> note, for the old concept's stop and the new concept's late start
+    that a continuous tag change accounts for."""
+    findings = list(findings)
+    out: dict[str, str] = {}
+    for tag in (f for f in findings if f.kind == "tag_change"):
+        old, _, new = (tag.concept or "").partition(" -> ")
+        old_last, _, new_first = (tag.period or "").partition("/")
+        if any(g.kind == "gap" and g.concept == tag.concept and g.company == tag.company for g in findings):
+            continue
+        note = f"Explained by the tag change from {short_concept(old)} to {short_concept(new)} ({old_last} / {new_first})."
+        for f in findings:
+            if f.company != tag.company:
+                continue
+            if f.kind == "early_stop" and f.concept == old and (f.period or "").endswith(old_last):
+                out[f.id] = note
+            elif f.kind == "late_start" and f.concept == new and (f.period or "").startswith(new_first):
+                out[f.id] = note
+    return out
+
+
 def company_headline(company: str, findings: list[Finding]) -> str:
     if not findings:
         return f"{company}: no problem found in the requested window."
+    explained = explained_by_tag_change(findings)
     by_kind: dict[str, list[Finding]] = defaultdict(list)
     for f in findings:
-        by_kind[f.kind].append(f)
+        if f.id not in explained:
+            by_kind[f.kind].append(f)
     parts = []
     for tag in by_kind.get("tag_change", []):
         old, _, new = (tag.concept or "").partition(" -> ")
-        boundary = (tag.period or "").replace("/", " to ")
-        hole = any(g for g in by_kind.get("gap", []) if " -> " in (g.concept or ""))
-        parts.append(f"revenue moves from {short_concept(old)} to {short_concept(new)} at {boundary}"
-                     + (" with periods missing in between" if hole else ", continuously"))
+        old_last, _, new_first = (tag.period or "").partition("/")
+        hole = any(" -> " in (g.concept or "") for g in by_kind.get("gap", []))
+        parts.append(f"the {short_concept(old)} series stops at {old_last} and continues under {short_concept(new)} "
+                     f"from {new_first}" + (", with periods missing in between" if hole
+                                            else ", a tag change, not missing revenue"))
     for stop in by_kind.get("early_stop", []):
-        if not by_kind.get("tag_change"):
-            parts.append(f"the {short_concept(stop.concept or '')} series stops at {(stop.period or '').strip('/')}")
+        parts.append(f"the {short_concept(stop.concept or '')} series stops at {(stop.period or '').strip('/')}")
     for start in by_kind.get("late_start", []):
         parts.append(f"the {short_concept(start.concept or '')} series starts late, at {(start.period or '').split('/')[0]}")
     for kind, one, many in (
@@ -103,7 +126,10 @@ def company_headline(company: str, findings: list[Finding]) -> str:
 
 def recommended_actions(findings: list[Finding]) -> list[str]:
     grouped: dict[tuple[str, str, str], list[Finding]] = defaultdict(list)
+    explained = explained_by_tag_change(findings)
     for f in ordered(findings):
+        if f.id in explained:
+            continue
         grouped[(f.company, f.kind, f.concept or "")].append(f)
     actions = []
     for (company, kind, concept), group in grouped.items():
@@ -166,6 +192,7 @@ def render_markdown(result: RunResult, report: ReportInput) -> str:
         lines += [f"## {company}", ""]
         for paragraph in report.explanations.get(company, []):
             lines += [paragraph.strip(), ""]
+        explained = explained_by_tag_change(found)
         main = [f for f in found if f.kind != "duplicate"]
         dups = [f for f in found if f.kind == "duplicate"]
         if not found:
@@ -175,12 +202,12 @@ def render_markdown(result: RunResult, report: ReportInput) -> str:
                       "|---|---|---|---|---|---|---|"]
             for f in main:
                 lines.append(f"| {_cell(f.period or '')} | {LABEL.get(f.kind, f.kind)} | {_cell(short_concept(f.concept or ''))} "
-                             f"| {f.confidence:.2f} | {_rows_cited(f)} | {_cell(f.description)} | "
+                             f"| {f.confidence:.2f} | {_rows_cited(f)} | {_cell(f.description + (' ' + explained[f.id] if f.id in explained else ''))} | "
                              f"{_cell(f.recommendation or '')} |")
             lines.append("")
         if dups:
             periods = ", ".join(f.period or "" for f in dups[:8]) + (f" and {len(dups) - 8} more" if len(dups) > 8 else "")
-            lines += [f"**Duplicated across 10-K and 10-Q forms** ({len(dups)} periods, confidence "
+            lines += [f"**Duplicated across 10-K and 10-Q forms** ({len(dups)} period{'s' if len(dups) > 1 else ''}, confidence "
                       f"{min(f.confidence for f in dups):.2f}-{max(f.confidence for f in dups):.2f}): {periods}. "
                       f"Example: {dups[0].description} Rows: {_rows_cited(dups[0], 4)}.", ""]
     lines += ["## Recommended actions", ""] + [f"- {a}" for a in result.recommended_actions] + [""]

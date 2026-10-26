@@ -114,11 +114,11 @@ class Retriever:
             )
         return rows
 
-    def profile(self, company_key: str) -> Rows:
-        table = f"edgar.{company_key}_profile_table"
+    def profile_rows(self, table: str = "edgar.all_companies_profile_table") -> Rows:
+        """Company profiles: SEC name and SIC code joined to the SIC reference."""
         if not _TABLE.match(table):
-            raise ValueError(f"not a registered company: {company_key!r}")
-        result = self._run(f"SELECT * FROM {table}", "company profile: name and SIC", limit=10)
+            raise ValueError(f"not a registered table name: {table!r}")
+        result = self._run(f"SELECT * FROM {table}", "company profiles: name and SIC", limit=100)
         return Rows(table, result.statement, result.records)
 
     def dq_invalid_companies(self) -> Rows:

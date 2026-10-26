@@ -30,7 +30,10 @@ def test_only_accepted_findings_are_reported_in_the_contract_shape(tmp_path):
     assert {f.status for f in result.findings} == {"accepted"}
     assert "late_start-rejected" not in {f.id for f in result.findings}
     assert [f.kind for f in result.findings][:2] == ["tag_change", "early_stop"]
-    assert result.summary.startswith("Apple: revenue moves from Revenues to RevenueFromContractWithCustomerExcludingAssessedTax")
+    assert result.summary.startswith("Apple: the Revenues series stops at 2018-09-29 and continues under "
+                                     "RevenueFromContractWithCustomerExcludingAssessedTax from 2018-09-30, a tag change")
+    assert "Revenues series stops at 2018-09-29;" not in result.summary, "the stop is told once, as the tag change"
+    assert not any("after 2018-09-29" in a for a in result.recommended_actions)
     assert "1 rejected" in result.summary
     assert 0 < result.confidence <= 1
     assert result.limitations[0] == "one" and len(result.limitations) == 4

@@ -91,6 +91,12 @@ class Outcome:
 
 def check_support(finding: Finding, evidence: Evidence) -> str | None:
     """None when the cited rows support the finding; otherwise the reason they do not."""
+    if finding.kind == "other":  # reference data: self-contained, the rows are the data-quality records
+        cited_ids = [rid for s in finding.sources for rid in s.row_ids]
+        held = {str(e.get("row_id")) for e in finding.evidence}
+        if not cited_ids:
+            return "the finding cites no rows"
+        return None if set(cited_ids) <= held else "the cited records are not in the finding's evidence"
     tables = evidence.tables()
     cited: list[tuple[str, Fact]] = []
     missing: list[str] = []

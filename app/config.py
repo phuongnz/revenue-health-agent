@@ -73,6 +73,8 @@ class Settings(BaseModel):
     log_level: str = "INFO"
     log_dir: Path = Path("logs")
     port: int = 8000
+    run_timeout_s: float = Field(default=480.0, ge=300.0, le=600.0)
+    step_timeout_s: float = Field(default=180.0, ge=60.0, le=180.0)
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -100,6 +102,8 @@ class Settings(BaseModel):
             log_level=(env.get("LOG_LEVEL") or "INFO").strip().upper(),
             log_dir=Path((env.get("LOG_DIR") or "logs").strip()),
             port=int(port_raw),
+            run_timeout_s=_number(env, "RUN_TIMEOUT_S", 480.0, 300.0, 600.0),
+            step_timeout_s=_number(env, "STEP_TIMEOUT_S", 180.0, 60.0, 180.0),
         )
 
     def lane_for(self, agent_name: str) -> str:
