@@ -1,0 +1,7 @@
+{
+  "run_id": "example_1",
+  "input": {
+    "query": "Can I trust Apple's reported revenue series from 2009 to today for a long-run growth model?",
+    "companies": ["AAPL"]
+  }
+}

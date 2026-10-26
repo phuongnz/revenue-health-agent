@@ -1,0 +1,117 @@
+{
+ "key": "7bc504ed785cd050",
+ "statement": "SHOW TABLES IN edgar",
+ "captured_in": [
+  "example_1",
+  "example_2",
+  "example_3"
+ ],
+ "headers": [
+  "table_identifier",
+  "catalog_name",
+  "catalog_type"
+ ],
+ "rows": [
+  [
+   "APPLE_REVENUE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "IBM_REVENUE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "ORACLE_REVENUE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "WALMART_REVENUE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "TARGET_REVENUE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "FORD_REVENUE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "TESLA_REVENUE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "APPLE_RFCC_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "ORACLE_RFCC_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "WALMART_RFCC_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "TARGET_RFCC_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "WALMART_PROFILE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "TARGET_PROFILE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "FORD_PROFILE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "TESLA_PROFILE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "TESLA_RFCC_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "APPLE_PROFILE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "IBM_PROFILE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "ORACLE_PROFILE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ],
+  [
+   "ALL_COMPANIES_PROFILE_TABLE",
+   "edgar",
+   "Schema Store View"
+  ]
+ ],
+ "total": 20
+}

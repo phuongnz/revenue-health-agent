@@ -66,9 +66,37 @@ SIC reference and semantic layer:
   IBM's reference columns are empty. Five SEC descriptions differ in wording from the
   reference ("&" against "and"; "Retail-" and "Services-" prefixes).
 
-## Sample mode
+## Sample mode: the declared subset
 
-`data/sample/` holds the query results and model completions captured from live runs,
-as a small declared subset, so `SAMPLE_MODE=true` can run the same agent logic without
-Zetaris, Nightshift or network access. It is filled in a later phase and documented
-here when it is.
+`data/sample/` holds what Zetaris and the models answered in three live runs, the three
+requests in `input_examples/`, captured on 26 October 2026 by
+`scripts/capture_sample.py` (run by hand through `./run.sh`, never from a test). With
+`SAMPLE_MODE=true` the agents run unchanged on these answers, with no Zetaris, no
+Nightshift and no network.
+
+| Path | Holds |
+|---|---|
+| `manifest.json` | the capture date (sample mode's "today", so the replayed prompts match), and for each run its input, status, trace and the keys it read |
+| `zetaris/<key>.json` | one statement's answer: the statement, headers, rows. Key: sha256 of the statement with whitespace folded, first 16 hex digits |
+| `completions/<key>.json` | one model call's answer: text, requested and routed model, Meterless receipt, usage. Key: sha256 of the agent name and the exact messages, first 16 hex digits |
+
+The subset, and nothing more:
+
+| Statement | Rows |
+|---|---|
+| Apple, `edgar.apple_revenue_table` and `edgar.apple_rfcc_table` | 11 and 117 |
+| Oracle, `edgar.oracle_revenue_table`, fiscal 2010 to 2015 | 85 |
+| Target, `edgar.target_revenue_table` and `edgar.target_rfcc_table` | 101 and 126 |
+| Ford, `edgar.ford_revenue_table` | 231 |
+| `edgar.all_companies_profile_table` | 7 |
+| `SHOW TABLES IN edgar` | 20 |
+| `SHOW DQ ALL INVALID TABLE ...sic_edgar_usl.company` | 1 (IBM's SIC code) |
+
+That is 671 SEC revenue facts of the 1,816 registered, plus 18 model completions.
+IBM, Walmart and Tesla are not in the sample; a request for them in sample mode fails
+with a clear "not in the sample" error instead of reaching the network.
+
+A changed statement or prompt has a different key, so sample mode fails loudly, naming
+the key, instead of replaying a stale answer (the plan's rule). A call that failed live
+is stored as its failure and fails the same way on replay. After changing a prompt, run
+`./run.sh uv run python scripts/capture_sample.py --fresh` again.

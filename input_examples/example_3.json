@@ -1,0 +1,7 @@
+{
+  "run_id": "example_3",
+  "input": {
+    "query": "Compare how far I can trust Target's and Ford's revenue series since 2009.",
+    "companies": ["Target", "Ford"]
+  }
+}

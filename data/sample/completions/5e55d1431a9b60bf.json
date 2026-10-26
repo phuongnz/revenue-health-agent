@@ -1,0 +1,80 @@
+{
+ "key": "5e55d1431a9b60bf",
+ "agent": "Evaluator",
+ "purpose": "critique round 1",
+ "prompt_preview": "Company: Ford. Window: fiscal years from 2009, data expected through 2025-10-26. Each finding below was computed by code from the cited rows. Only a sample is …",
+ "captured_in": [
+  "example_3"
+ ],
+ "text": "{\"reviews\": [{\"id\": \"F1\", \"verdict\": \"accept\", \"reason\": \"The evidence row confirms the latest reported period ends 2024-12-31 with no subsequent filing covering a period ending on or after 2025-10-26.\", \"confidence\": 0.98}, {\"id\": \"F2\", \"verdict\": \"accept\", \"reason\": \"The two cited rows show a $1.688B (-0.99%) downward revision between the 2010 10-K and the subsequent 8-K for FY2007.\", \"confidence\": 0.99}, {\"id\": \"F3\", \"verdict\": \"accept\", \"reason\": \"The two cited rows show a $1.53B (-1.05%) downward revision between the 2010 10-K and the subsequent 8-K for FY2008.\", \"confidence\": 0.99}, {\"id\": \"F4\", \"verdict\": \"accept\", \"reason\": \"The two cited rows show a $767M (-1.48%) downward revision between the original 2009 10-Q and the 2010 10-Q for the first half of 2009.\", \"confidence\": 0.99}, {\"id\": \"F5\", \"verdict\": \"accept\", \"reason\": \"Three cited rows for Q1 2015 carry the identical $33.9B value across a 10-Q, a later 10-K, and a subsequent 10-Q, confirming duplicate reporting.\", \"confidence\": 1.0}, {\"id\": \"F6\", \"verdict\": \"accept\", \"reason\": \"Three cited rows for Q2 2015 carry the identical $37.263B value across a 10-Q, a later 10-K, and a subsequent 10-Q, confirming duplicate reporting.\", \"confidence\": 1.0}, {\"id\": \"F7\", \"verdict\": \"accept\", \"reason\": \"Three cited rows for Q3 2015 carry the identical $38.144B value across a 10-Q, a later 10-K, and a subsequent 10-Q, confirming duplicate reporting.\", \"confidence\": 1.0}], \"critique\": \"The findings accurately capture material data-quality issues: an early stop before the requested window, historical restatements of roughly 1% for 2007-2009, and systematic duplicate quarterly values across multiple filings for 2015. An equity analyst relying on this series must deduplicate the 2015 quarters and be aware that the latest available annual period is 2024, not the expected 2025 period.\"}",
+ "requested_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "routed_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "receipt": {
+  "schema": "meterless.compute_receipt.v1",
+  "receipt_id": "rcpt_req_v4qi0xx9",
+  "decision_id": "req_v4qi0xx9",
+  "requested_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "provider_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "routed_model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "winning_route": {
+   "model": "nvidia/nemotron-3-ultra-550b-a55b",
+   "label": "Nemotron 3 Ultra 550B A55B",
+   "provider": "nvidia",
+   "kind": "cloud",
+   "tier": "C"
+  },
+  "requires_review": false,
+  "phases": [
+   {
+    "phase": "final_synthesis",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "ms": 30675,
+    "tokensIn": 3409,
+    "tokensOut": 1761,
+    "outputTps": 57.408312958435204,
+    "coherence": null,
+    "tier": "C",
+    "reflex_decided_in_ms": 0.2
+   }
+  ],
+  "usage": {
+   "input_tokens": 3409,
+   "output_tokens": 1761,
+   "total_tokens": 5170,
+   "output_tps": 57.408312958435204,
+   "latency_ms": 30675
+  },
+  "cost": {
+   "actual_usd": 0,
+   "naive_usd": 0,
+   "baseline": {
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "label": "Nemotron 3 Ultra 550B A55B",
+    "source": "mode-default-frontier"
+   },
+   "verifier_usd": 0,
+   "race_overhead_usd": 0
+  },
+  "savings": {
+   "amount": 0,
+   "currency": "USD",
+   "vs": "Nemotron 3 Ultra 550B A55B",
+   "baseline_source": "mode-default-frontier"
+  },
+  "cache": {
+   "status": "miss",
+   "losers_reclaimed": 0,
+   "partials_reclaimed": 0
+  },
+  "mode": "auto",
+  "scope": "user",
+  "app": "revenue-health-agent",
+  "from_cache": false
+ },
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 3409,
+  "completion_tokens": 1761,
+  "total_tokens": 5170
+ }
+}

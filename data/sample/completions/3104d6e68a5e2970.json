@@ -1,0 +1,80 @@
+{
+ "key": "3104d6e68a5e2970",
+ "agent": "Analyst",
+ "purpose": "explain step 1",
+ "prompt_preview": "You are explaining a revenue data-quality audit one company and revenue concept at a time; each step gives you that step's checked findings. User Request: Audi…",
+ "captured_in": [
+  "example_2"
+ ],
+ "text": "Oracle's revenue series from fiscal years 2010 to 2015 shows no accepted findings, meaning the data passes the primary checks without gaps, restatements, or duplication. The eight-year window is fully covered by accepted filings, so the reported figures can be used for modeling without adjusting for data-quality breaks. [STATE_CHECKPOINT] COMPLETED: Oracle us-gaap/Revenues (primary) clean for 2010–2015. REMAINING: No further steps needed for this concept. DECISIONS: Reliable for modeling. CONTEXT: No carry-over issues; series is complete within the window. [TASK_COMPLETE]",
+ "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+ "routed_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+ "receipt": {
+  "schema": "meterless.compute_receipt.v1",
+  "receipt_id": "rcpt_req_ok412ft4",
+  "decision_id": "req_ok412ft4",
+  "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "provider_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "routed_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "winning_route": {
+   "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+   "label": "Nemotron 3.5 Lightning 30B A3B",
+   "provider": "nvidia",
+   "kind": "cloud",
+   "tier": "A"
+  },
+  "requires_review": false,
+  "phases": [
+   {
+    "phase": "final_synthesis",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "ms": 4490,
+    "tokensIn": 475,
+    "tokensOut": 146,
+    "outputTps": 32.516703786191535,
+    "coherence": null,
+    "tier": "A",
+    "reflex_decided_in_ms": 0.2
+   }
+  ],
+  "usage": {
+   "input_tokens": 475,
+   "output_tokens": 146,
+   "total_tokens": 621,
+   "output_tps": 32.516703786191535,
+   "latency_ms": 4490
+  },
+  "cost": {
+   "actual_usd": 0,
+   "naive_usd": 0,
+   "baseline": {
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "label": "Nemotron 3 Ultra 550B A55B",
+    "source": "mode-default-frontier"
+   },
+   "verifier_usd": 0,
+   "race_overhead_usd": 0
+  },
+  "savings": {
+   "amount": 0,
+   "currency": "USD",
+   "vs": "Nemotron 3 Ultra 550B A55B",
+   "baseline_source": "mode-default-frontier"
+  },
+  "cache": {
+   "status": "miss",
+   "losers_reclaimed": 0,
+   "partials_reclaimed": 0
+  },
+  "mode": "auto",
+  "scope": "user",
+  "app": "revenue-health-agent",
+  "from_cache": false
+ },
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 475,
+  "completion_tokens": 146,
+  "total_tokens": 621
+ }
+}
