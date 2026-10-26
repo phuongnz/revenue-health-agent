@@ -12,6 +12,11 @@ the GenAI.Works Resource Center, October 2026).
   the SQL statement splitter, the user-agent placeholder handling and the REST channel.
   Changes: configuration from the environment only, result headers kept, a single
   wait-and-retry on HTTP 429, pacing between statements, no JDBC channel.
+- `app/adapters/zetaris.py` adapts the REST request of `scripts/zetaris_sql.py`
+  (`queryId`, `sql`, `source`, `limit`; bearer key, `X-Org-ID`, a fresh `X-Request-ID`).
+  Changes: httpx instead of urllib, a read-only statement allowlist, typed cells with the
+  headers kept, a 30-60 s timeout, three attempts with back-off and a `Retry-After` wait
+  on HTTP 429, and a trace event per statement.
 - `scripts/zetaris/*.sql` adapts the registration recipes under `open_data/rest_apis/sql/`
   and `open_data/usl/sql/`: a `CACHE TABLE` per raw table was added, a second XBRL
   concept was registered the same way, and the recipes were reordered.
