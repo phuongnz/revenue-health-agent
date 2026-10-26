@@ -70,6 +70,10 @@ def split_statements(text: str) -> list[str]:
         c = text[i]
         if quote:
             buf.append(c)
+            if c == "\\" and i + 1 < n:
+                buf.append(text[i + 1])
+                i += 2
+                continue
             if c == quote:
                 quote = None
         elif c in "'\"`":
@@ -195,12 +199,16 @@ class RestChannel:
         )
         try:
             with urlopen(req, timeout=self.timeout) as resp:
-                return json.loads(resp.read().decode() or "null")
+                raw = resp.read().decode()
         except HTTPError as e:
             detail = _short(e.read().decode(errors="replace"))
             raise ZetarisError(f"HTTP {e.code}: {detail}") from e
         except (URLError, OSError) as e:
             raise ZetarisError(f"Cannot reach {self.base}: {getattr(e, 'reason', e)}") from e
+        try:
+            return json.loads(raw or "null")
+        except ValueError as e:
+            raise ZetarisError(f"Not a JSON reply from {self.base}{path}: {_short(raw, 160)}") from e
 
     def run(self, sql: str, limit: int = 100) -> Result:
         """Run one statement. On HTTP 429 wait once and retry that statement once."""
@@ -223,7 +231,11 @@ def load_statements(paths: Iterable[Path], user_agent: str | None) -> list[tuple
     """(source label, statement) for every statement in the files, placeholder applied."""
     out: list[tuple[str, str]] = []
     for path in paths:
-        stmts = apply_user_agent(split_statements(path.read_text()), user_agent)
+        try:
+            text = path.read_text()
+        except OSError as e:
+            raise ZetarisError(f"Cannot read {path}: {e.strerror or e}") from e
+        stmts = apply_user_agent(split_statements(text), user_agent)
         out.extend((path.name, s) for s in stmts)
     return out
 
@@ -258,6 +270,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.files and not args.execute:
         ap.error("give SQL files or -e SQL")
+    if args.files and args.execute:
+        ap.error("give SQL files or -e SQL, not both")
 
     user_agent = os.environ.get("ZETARIS_USER_AGENT")
     try:
@@ -287,14 +301,14 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = channel.run(stmt, limit=args.limit)
         except ZetarisError as e:
-            if args.skip_exists and _is_exists_error(e):
-                print(f"  skipped, already exists: {_short(str(e), 160)}")
-                continue
-            print(f"register_sources: statement {i} failed: {e}", file=sys.stderr)
-            return 1
-        print(f"  ok in {time.monotonic() - started:.1f}s")
-        if result.rows or result.headers:
-            _print_rows(result, args.limit)
+            if not (args.skip_exists and _is_exists_error(e)):
+                print(f"register_sources: statement {i} failed: {e}", file=sys.stderr)
+                return 1
+            print(f"  skipped, already exists: {_short(str(e), 160)}")
+        else:
+            print(f"  ok in {time.monotonic() - started:.1f}s")
+            if result.rows or result.headers:
+                _print_rows(result, args.limit)
         if args.pace > 0 and i < len(work):
             time.sleep(args.pace)
     return 0

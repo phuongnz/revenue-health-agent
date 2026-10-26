@@ -45,6 +45,42 @@ def test_trailing_semicolon_and_blank_statements_are_ignored():
     assert rs.split_statements("SELECT 1;;\n;  ") == ["SELECT 1"]
 
 
+def test_backslash_escaped_quote_does_not_end_the_string():
+    assert rs.split_statements("SELECT 'a\\'b;c' AS v; SELECT 2") == [
+        "SELECT 'a\\'b;c' AS v",
+        "SELECT 2",
+    ]
+
+
+def test_non_json_reply_is_a_zetaris_error(monkeypatch):
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b"<html>login</html>"
+
+    monkeypatch.setattr(rs, "urlopen", lambda req, timeout: Resp())
+    ch = rs.RestChannel(api_key="k", base_url="http://x", org_id="1")
+    with pytest.raises(rs.ZetarisError, match="Not a JSON reply"):
+        ch.run("SELECT 1")
+
+
+def test_missing_file_is_reported_not_raised(tmp_path, capsys):
+    assert rs.main([str(tmp_path / "nope.sql"), "--dry-run"]) == 2
+    assert "Cannot read" in capsys.readouterr().err
+
+
+def test_files_and_execute_together_are_refused(tmp_path):
+    f = tmp_path / "x.sql"
+    f.write_text("SELECT 1;")
+    with pytest.raises(SystemExit):
+        rs.main([str(f), "-e", "SELECT 2", "--dry-run"])
+
+
 @pytest.mark.parametrize(
     "ua,ok",
     [

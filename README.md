@@ -12,7 +12,7 @@ GenAI.Works Open Agent Hackathon 2026.
 
 ## Run
 
-How to run it, and how to test it:
+The checkpoint, a secret scan over tracked files and the test suite:
 
     ./test.sh
 

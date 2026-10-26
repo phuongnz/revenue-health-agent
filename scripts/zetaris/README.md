@@ -20,8 +20,10 @@ own verified recipes cover).
 
 ## Running
 
-Credentials come from the environment, never from a file. The maintainer's wrapper
-injects them from a vault; with a `.env` of your own, `export` it first.
+Credentials come from the environment, never from a file in this repository. The
+maintainer's wrapper injects them from a vault. If you run this yourself, export them in
+the shell, or put them in a local `.env` copied from `.env.example` (it is ignored by
+git) and run `set -a; . ./.env; set +a` first.
 
     export ZETARIS_API_KEY=...            # from the Zetaris UI, Settings > API keys
     export ZETARIS_REST_URL=http://localhost:8888/api/v1.0
