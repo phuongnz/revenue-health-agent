@@ -7,8 +7,16 @@
   client returns it whole and puts its main fields in the trace event, with
   `routed_model` in the event's `model`.
   A reply whose `routed_model` is not Nemotron is returned but traced `needs_validation`.
-- **Bounded time.** 30-90 s per request; three attempts with exponential back-off of
-  1-8 s on a timeout, a connection error, an HTTP 5xx or 429. Other 4xx are not retried.
+- **Bounded time.** 30-90 s per request (`timeout_s` per call, capped at 90 s); three
+  attempts with exponential back-off of 1-8 s on a timeout, a connection error, an HTTP
+  5xx or 429. Other 4xx are not retried. A `deadline` caps every attempt to the time left
+  and stops the retries when it has passed.
+- **Thinking only where it is wanted.** Nemotron reasons before it answers unless the
+  chat template is told not to, and its completion tokens include the reasoning: a
+  Lightning call asked for a paragraph spent its whole `max_tokens` thinking and came
+  back empty (HTTP 502 `empty_response`). So a call thinks only on the Evaluator's lane
+  (Ultra critiques the findings); every other call sends
+  `chat_template_kwargs: {enable_thinking: false}`. `thinking=` overrides per call.
 - **Reasoning split off.** Nemotron Ultra may put its reasoning in the content inside
   `<think>…</think>`; `text` is the answer without it, `reasoning` keeps it.
 
@@ -37,6 +45,8 @@ RECEIPT_TRACE_KEYS = (
 )
 """The receipt fields copied into a trace line. The full receipt (with its nested copy, the
 signed envelope and the host telemetry, about 10 KB) stays on `ChatResult.receipt`."""
+MAX_TIMEOUT_S = 90.0  # the build contract's upper bound for one model call
+MIN_ATTEMPT_S = 5.0
 _THINK = re.compile(r"<think>(.*?)(</think>|$)", re.DOTALL | re.IGNORECASE)
 
 
@@ -123,17 +133,19 @@ class MeterlessClient:
     def __exit__(self, *exc: object) -> None:
         self.close()
 
-    def _post(self, body: dict[str, Any]) -> dict[str, Any]:
+    def _post(self, body: dict[str, Any], timeout_s: float | None = None) -> dict[str, Any]:
         token = self.settings.meterless_runtime_token.get_secret_value()  # type: ignore[union-attr]
         headers = {
             "Authorization": f"Bearer {token}",
             "meterless-app": self.settings.meterless_app,
             "meterless-scope": "user",
         }
+        timeout_s = timeout_s or self.settings.meterless_timeout_s
         try:
-            response = self._http.post(CHAT_PATH, json=body, headers=headers)
+            response = self._http.post(CHAT_PATH, json=body, headers=headers,
+                                       timeout=httpx.Timeout(timeout_s, connect=min(10.0, timeout_s)))
         except httpx.TimeoutException as e:
-            raise _Transient(f"timed out after {self.settings.meterless_timeout_s:g} s") from e
+            raise _Transient(f"timed out after {timeout_s:.0f} s") from e
         except httpx.TransportError as e:
             raise _Transient(f"cannot reach Nightshift: {type(e).__name__} (is the app running?)") from e
         if response.status_code == 429 or response.status_code >= 500:
@@ -158,8 +170,13 @@ class MeterlessClient:
         purpose: str = "",
         target_agent: str | None = None,
         extra: dict[str, Any] | None = None,
+        thinking: bool | None = None,
+        timeout_s: float | None = None,
+        deadline: float | None = None,
     ) -> ChatResult:
-        """One chat completion on the agent's pinned lane, traced with its receipt."""
+        """One chat completion on the agent's pinned lane, traced with its receipt.
+        `thinking` defaults to on for the Evaluator's lane only; `timeout_s` bounds each
+        attempt (at most 90 s); `deadline` (a `time.monotonic()` value) bounds them all."""
         lane = self.settings.lane_for(agent_name)
         body: dict[str, Any] = {
             "model": lane,
@@ -168,8 +185,27 @@ class MeterlessClient:
             "temperature": temperature,
             "stream": False,
         }
+        if thinking is None:
+            thinking = lane == self.settings.evaluator_lane
+        if not thinking:
+            body["chat_template_kwargs"] = {"enable_thinking": False}
         if extra:
-            body.update({k: v for k, v in extra.items() if k not in ("model", "messages", "stream")})
+            for k, v in extra.items():
+                if k in ("model", "messages", "stream"):
+                    continue
+                if k == "chat_template_kwargs" and isinstance(v, dict):
+                    body[k] = {**body.get(k, {}), **v}
+                else:
+                    body[k] = v
+        per_attempt = min(MAX_TIMEOUT_S, timeout_s or self.settings.meterless_timeout_s)
+
+        def attempt_timeout() -> float:
+            if deadline is None:
+                return per_attempt
+            left = deadline - time.monotonic()
+            if left < MIN_ATTEMPT_S:
+                raise MeterlessError(f"no time left for a model call ({max(left, 0):.0f} s of the budget remain)")
+            return min(per_attempt, left)
         prompt = next((m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), "")
 
         def before_sleep(state: RetryCallState) -> None:
@@ -194,7 +230,7 @@ class MeterlessClient:
             ):
                 with attempt_state:
                     attempt = attempt_state.retry_state.attempt_number
-                    out = self._post(body)
+                    out = self._post(body, attempt_timeout())
         except MeterlessError as e:
             self.tracer.emit(
                 agent_name, "model_call", input_summary=_short(prompt), output_summary=f"failed: {e}",

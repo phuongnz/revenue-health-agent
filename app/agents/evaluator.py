@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
@@ -32,7 +33,9 @@ from app.tracing import NullTracer, Tracer
 
 AGENT = "Evaluator"
 CRITIQUE_MAX_TOKENS = 8192  # Ultra reasons before it answers; its completion tokens include the reasoning
-MODEL_REVIEW_LIMIT = 15  # findings per critique call; the rest stand on the support check
+MODEL_REVIEW_LIMIT = 10  # findings per critique call; the rest stand on the support check
+PER_KIND_REVIEW = {"duplicate": 3, "restatement": 3}  # mechanical kinds: a sample is enough for the critique
+CRITIQUE_TIMEOUT_S = 90.0  # Ultra's reasoning over ten findings can pass the 60 s default
 TRUNCATION = ("early_stop", "late_start")
 KIND_PRIORITY = {"tag_change": 0, "early_stop": 1, "late_start": 2, "gap": 3, "restatement": 4, "duplicate": 5}
 
@@ -163,11 +166,12 @@ def check_support(finding: Finding, evidence: Evidence) -> str | None:
     if kind == "tag_change":
         if len({t for t, _ in cited}) < 2:
             return "a tag change needs rows from both concepts"
+        handover = (finding.period or "").partition("/")[2]
         for table, f in cited:
             all_facts = tables[table][0]
             last, first = max(x.end for x in all_facts), min((x.start or x.end) for x in all_facts)
-            if f.end != last and (f.start or f.end) != first:
-                return f"{f.row_id} is neither the last nor the first period of {table}"
+            if f.end != last and (f.start or f.end) != first and str(f.start) != handover:
+                return f"{f.row_id} is neither the last, the first nor the hand-over period of {table}"
         return None
     return None
 
@@ -248,12 +252,18 @@ class Evaluator:
         unavailable or its reply unusable (the caller keeps the code verdicts)."""
         if self.chat is None or not findings:
             return None
-        ranked = sorted(findings, key=lambda f: KIND_PRIORITY.get(f.kind, 9))[:MODEL_REVIEW_LIMIT]
+        ranked, per_kind = [], Counter()
+        for f in sorted(findings, key=lambda f: KIND_PRIORITY.get(f.kind, 9)):
+            if per_kind[f.kind] < PER_KIND_REVIEW.get(f.kind, MODEL_REVIEW_LIMIT):
+                per_kind[f.kind] += 1
+                ranked.append(f)
+        ranked = ranked[:MODEL_REVIEW_LIMIT]
         keyed = [(f"F{i + 1}", f, notes.get(f.id)) for i, f in enumerate(ranked)]
         messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": critique_prompt(keyed, ctx)}]
         try:
             result = self.chat.chat(self.name, messages, max_tokens=self.max_tokens, temperature=0.1,
-                                    purpose=f"critique round {round_no}", target_agent="Analyst")
+                                    purpose=f"critique round {round_no}", target_agent="Analyst",
+                                    timeout_s=CRITIQUE_TIMEOUT_S)
             reviews, critique = parse_reviews(result.text)
         except Exception as e:  # noqa: BLE001 - the fallback is the code verdicts
             note = f"Model critique unavailable in round {round_no} ({type(e).__name__}); verdicts rest on the support check."

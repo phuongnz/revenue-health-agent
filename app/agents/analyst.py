@@ -230,7 +230,8 @@ def finding_id(company: str, concept: str, kind: str, period: str) -> str:
 
 
 def short_concept(concept: str) -> str:
-    return concept.split("/", 1)[-1]
+    """`us-gaap/Revenues` -> `Revenues`; a tag-change pair `a -> b` is shortened on both sides."""
+    return " -> ".join(part.split("/", 1)[-1] for part in concept.split(" -> "))
 
 
 def _make(
@@ -430,24 +431,34 @@ def compare_concepts(
         return []  # the newer concept never outlasts the older one: no hand-over to report
     old_last = last_end(old)
     new_first = first_start(new)
-    old_cited = sorted((f for f in old if f.end == old_last), key=lambda f: (not f.is_annual, f.sort_filed()))[:2]
-    new_cited = sorted((f for f in new if (f.start or f.end) == new_first),
-                       key=lambda f: (not f.is_annual, f.sort_filed()))[:2]
+    # The hand-over: where the newer concept takes over. When the newer concept also
+    # reports earlier periods (comparatives restated under the new tag), that is the first
+    # of its periods starting after the older series ends, not its first period.
+    later = [f.start for f in new if f.start and f.start > old_last]
+    handover = min(later) if new_first <= old_last and later else new_first
+
+    def rank(f: Fact) -> tuple[bool, tuple]:
+        return (not f.is_annual, f.sort_filed())
+
+    old_cited = sorted((f for f in old if f.end == old_last), key=rank)[:2]
+    new_cited = sorted((f for f in new if (f.start or f.end) == handover), key=rank)[:2]
+    if handover != new_first:
+        new_cited += sorted((f for f in new if (f.start or f.end) == new_first), key=rank)[:1]
     cited = [(f, old_ctx) for f in old_cited] + [(f, new_ctx) for f in new_cited]
     pair = f"{old_ctx.concept} -> {new_ctx.concept}"
     old_name, new_name = short_concept(old_ctx.concept), short_concept(new_ctx.concept)
-    uncovered = (new_first - old_last).days - 1
+    uncovered = (handover - old_last).days - 1
     if uncovered <= GAP_TOLERANCE_DAYS:
-        overlap = (f" Both concepts report the periods from {new_first} to {old_last}."
-                   if new_first <= old_last else "")
+        overlap = (f" {new_name} also reports {new_first} to {old_last} ({new_cited[-1].cite()}), the comparatives "
+                   f"of later filings, so both concepts cover those periods." if new_first <= old_last else "")
         return [_make(
-            primary, "tag_change", f"{old_last}/{new_first}",
+            primary, "tag_change", f"{old_last}/{handover}",
             f"Revenue moves from {old_name} to {new_name}: the last {old_name} period ends {old_last} "
-            f"({old_cited[0].cite()}) and the first {new_name} period starts {new_first} ({new_cited[0].cite()}). "
+            f"({old_cited[0].cite()}) and {new_name} continues from {handover} ({new_cited[0].cite()}). "
             f"The series is continuous across the tag change, so the stop under {old_name} is not missing "
             f"revenue.{overlap}",
             cited,
-            f"Join the two concepts into one series: {old_name} through {old_last}, {new_name} from {new_first}.",
+            f"Join the two concepts into one series: {old_name} through {old_last}, {new_name} from {handover}.",
             concept=pair,
         )]
     first_missing, last_missing = old_last + timedelta(days=1), new_first - timedelta(days=1)

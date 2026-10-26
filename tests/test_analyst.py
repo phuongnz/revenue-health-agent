@@ -87,6 +87,19 @@ def test_tag_change_from_revenues_to_rfcc_is_continuous():
     assert [f.id for f in compare_concepts(APPLE_RFCC_FY2019, NEW, APPLE_REVENUES, OLD)] != []
 
 
+def test_tag_change_hands_over_after_the_old_series_when_the_new_concept_has_comparatives():
+    # The FY2019 10-K also reports FY2017 under the new tag (live: edgar.apple_rfcc_table)
+    fy2017 = dict(APPLE_RFCC_FY2019[4], period_start="2016-09-25", period_end="2017-09-30", value_usd=229234000000)
+    rfcc = [fy2017, *APPLE_RFCC_FY2019]
+    [tag] = compare_concepts(APPLE_REVENUES, OLD, rfcc, NEW)
+    assert tag.period == "2018-09-29/2018-09-30", "the hand-over, not the first comparative"
+    assert "continues from 2018-09-30" in tag.description and "also reports 2016-09-25 to 2018-09-29" in tag.description
+    assert "0000320193-19-000119:2016-09-25:2017-09-30" in cited_ids(tag)
+    assert tag.recommendation.endswith("from 2018-09-30.")
+    from app.agents.evaluator import Evidence, check_support
+    assert check_support(tag, Evidence(APPLE_REVENUES, OLD, rfcc, NEW)) is None
+
+
 def test_gap_and_restatement_on_synthetic_rows():
     ctx = SeriesContext("Synthetic", "us-gaap/Revenues", "edgar.synthetic_revenue_table", as_of=date(2015, 6, 1),
                         period_start="2010")

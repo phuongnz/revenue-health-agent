@@ -87,7 +87,7 @@ def explained_by_tag_change(findings: Iterable[Finding]) -> dict[str, str]:
                 continue
             if f.kind == "early_stop" and f.concept == old and (f.period or "").endswith(old_last):
                 out[f.id] = note
-            elif f.kind == "late_start" and f.concept == new and (f.period or "").startswith(new_first):
+            elif f.kind == "late_start" and f.concept == new:  # the older concept covers the earlier years
                 out[f.id] = note
     return out
 

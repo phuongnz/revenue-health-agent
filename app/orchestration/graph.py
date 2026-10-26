@@ -76,8 +76,10 @@ class StepBudget:
         self.step_deadline = min(self.run_deadline, self.clock() + seconds)
 
     def chat(self, *args: Any, **kwargs: Any) -> Any:
-        if self.clock() > self.step_deadline:
+        left = self.step_deadline - self.clock()
+        if left <= 0:
             raise TimeoutError("the time budget for this step is spent; model call skipped")
+        kwargs.setdefault("deadline", time.monotonic() + left)  # every attempt fits in what is left
         return self.inner.chat(*args, **kwargs)
 
 
@@ -395,11 +397,12 @@ class _Run:
 
 
 def run_request(request: RunRequest, settings: Settings | None = None, stream: Any = sys.stdout,
-                as_of: date | None = None) -> RunResponse:
+                as_of: date | None = None, trace_id: str | None = None) -> RunResponse:
     """Build the clients for one request and run it. Never raises: a configuration or
-    internal failure comes back as the contract's error shape."""
+    internal failure comes back as the contract's error shape. `trace_id` lets a caller
+    that may give up on the run (the server's timeout) name the trace in advance."""
     settings = settings or Settings.from_env()
-    tracer = Tracer(request.run_id, settings.log_dir, stream=stream)
+    tracer = Tracer(request.run_id, settings.log_dir, trace_id=trace_id, stream=stream)
     started = time.monotonic()
 
     def fail(kind: str, message: str, recoverable: bool) -> RunResponse:
