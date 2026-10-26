@@ -9,7 +9,7 @@ from datetime import date
 import pytest
 
 from app.agents.analyst import Analyst, SeriesContext, analyze_series, compare_concepts
-from app.agents.evaluator import Evaluator, Evidence, check_support, parse_reviews
+from app.agents.evaluator import Evaluator, Evidence, check_explanation, check_support, parse_reviews
 from app.schemas import Source
 from app.tracing import NullTracer
 from tests.edgar_rows import APPLE_RFCC_FY2019, APPLE_REVENUES
@@ -132,7 +132,7 @@ def test_the_critique_runs_on_the_evaluator_lane_with_room_to_reason_and_blends_
     findings = analyze_series(APPLE_RFCC_FY2019, NEW)
     out, events = evaluate(findings, Evidence(APPLE_RFCC_FY2019, NEW), model)
     assert model.calls[0][0] == "Evaluator" and model.calls[0][1] >= 8192
-    assert out.model_reviewed and out.notes == ["Apple RevenueFromContractWithCustomerExcludingAssessedTax, round 1: Looks sound."]
+    assert out.model_reviewed and out.critiques == [("Apple", "Apple RevenueFromContractWithCustomerExcludingAssessedTax, round 1: Looks sound.")]
     dup = next(f for f in out.accepted if f.kind == "duplicate")
     assert dup.confidence == pytest.approx((0.95 + 0.9) / 2)
     critique = next(e for e in events if e.action == "critique")
@@ -176,3 +176,40 @@ def test_parse_reviews_reads_fenced_json_and_refuses_prose():
 def test_no_findings_is_a_clean_series():
     out, events = evaluate([], Evidence([], OLD))
     assert out.all == [] and events[-1].output_summary.startswith("no findings")
+
+
+def _apple_accepted():
+    found = analyze_series(APPLE_REVENUES, OLD) + compare_concepts(APPLE_REVENUES, OLD, APPLE_RFCC_FY2019, NEW)
+    return [f.model_copy(update={"status": "accepted"}) for f in found]
+
+
+@pytest.mark.parametrize("text", [
+    # the live Apple run's RFCC explanation and engine reflection, next to a continuous tag change
+    "The RFCC series begins in fiscal 2016, creating a coverage gap that the early_stop and late_start flags do not resolve.",
+    "The RevenueFromContractWithCustomerExcludingAssessedTax concept starts later and does not bridge the gap.",
+    "FY2019 to FY2025 are unaccounted for.",
+    "Apple restated its 2018 revenue.",
+    "Quarterly values are duplicated across forms.",
+    "The series stops at 2019-06-29.",
+    "Revenue was $270 billion in the last year.",
+])
+def test_prose_contradicting_a_finding_is_named(text):
+    assert check_explanation(text, _apple_accepted(), given="", company="Apple") is not None
+
+
+@pytest.mark.parametrize("text", [
+    "Apple's revenue continues under the new concept from 2018-09-30: a tag change, not missing revenue.",
+    "There is no gap and nothing was restated; the Revenues series starts late and stops early under this tag.",
+    "Its last annual value, $265.6 billion, closes the Revenues series at 2018-09-29.",
+    "",
+])
+def test_prose_that_agrees_with_the_findings_passes(text):
+    assert check_explanation(text, _apple_accepted(), given="", company="Apple") is None
+
+
+def test_a_clean_series_must_be_described_as_clean():
+    assert check_explanation("The series has gaps.", [], company="IBM") is not None
+    assert check_explanation("The series is clean in the window; no gap, duplicate or restatement.", [],
+                             company="IBM") is None
+    assert check_explanation("It runs 2009-01-01 to 2025-12-31.", [], given="rows covering 2009-01-01..2025-12-31",
+                             company="IBM") is None
