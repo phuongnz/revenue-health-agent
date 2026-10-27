@@ -248,7 +248,9 @@ code adapted from open-source projects is listed under Third-Party Code and Lice
 
 ## Demo Video
 
-The link is added here before submission.
+https://vimeo.com/1239826516 (3 min 15 s): the problem, the solution and the
+architecture from the deck, then a live run against Zetaris and Nightshift and two
+filters over its trace.
 
 ## AI and Model Usage
 
