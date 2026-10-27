@@ -1,0 +1,46 @@
+{
+  "project": "revenue-health-agent",
+  "description": "An agent that tells an equity analyst which periods of a company's SEC-reported revenue series can be trusted, with every finding cited to Zetaris rows.",
+  "hackathon": "GenAI.Works Open Agent Hackathon 2026",
+  "track": "Solving Fragmented Intelligence",
+  "repository": "https://github.com/phuongnz/revenue-health-agent",
+  "entry_points": {
+    "cli": "python run.py --input input_examples/example_1.json",
+    "http": "POST /run on 0.0.0.0:$PORT (python run.py)",
+    "sample_mode": "SAMPLE_MODE=true"
+  },
+  "data_layer": {
+    "provider": "Zetaris",
+    "adapter": "app/adapters/zetaris.py",
+    "registration": "scripts/zetaris/",
+    "access": "REST, POST /sql-editor/sqls/run, read-only statement allowlist"
+  },
+  "meterless_engines": [
+    {
+      "name": "Markovian",
+      "implementation": "app/engines/markovian.py",
+      "used_by": "app/orchestration/graph.py",
+      "feature": "Drives every run: one investigation step per chunk inside a bounded context, code-written carry-over between chunks, chunk cap and deadline, JSONL run record in logs/markovian-<run_id>.jsonl",
+      "tests": [
+        "tests/test_markovian_conformance.py (eff-001, snap-001, snap-002, ovl-001, lab-001, ref-001, mrk-001, cfg-001, ported from the upstream conformance runner)",
+        "tests/test_markovian.py"
+      ],
+      "upstream": "github.com/Meterless/Meterless engines/markovian, commit 85c5d41, Apache-2.0",
+      "generator": "injected; the engine never calls a model itself"
+    }
+  ],
+  "model_provider": {
+    "provider": "Meterless Nightshift",
+    "adapter": "app/adapters/meterless.py",
+    "models": {
+      "nvidia/nemotron-3.5-lightning-30b-a3b": "Analyst explanations, engine reflection, Planner company resolution",
+      "nvidia/nemotron-3-ultra-550b-a55b": "Evaluator critique"
+    },
+    "routing": "a fixed Nemotron model per agent, never meterless/auto; the receipt's routed_model is written to every model_call trace line"
+  },
+  "agents": ["Planner", "Retriever", "Analyst", "Evaluator", "Reporter"],
+  "traces": "logs/trace-<run_id>.jsonl and stdout",
+  "test_command": "./test.sh",
+  "ai_coding_tool": "Claude Code",
+  "pre_existing_components": "none"
+}
